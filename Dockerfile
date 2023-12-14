@@ -11,4 +11,4 @@ RUN pip install -r requirements.txt
 
 COPY ./app /streamlit_test
 ENTRYPOINT ["streamlit", "run"]
-CMD ["/streamlit_test/app.py"]
+CMD ["/streamlit_test/test.py"]
