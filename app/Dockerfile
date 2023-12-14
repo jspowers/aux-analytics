@@ -10,4 +10,4 @@ RUN pip install streamlit
 RUN pip install -r requirements.txt
 
 ENTRYPOINT [ "streamlit", "run"]
-CMD ["/app/app.py"]
+CMD ["/app.py"]
