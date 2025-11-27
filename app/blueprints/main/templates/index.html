@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Home - aux-analytics{% endblock %}
+
+{% block content %}
+<header>
+    <h1>aux-analytics</h1>
+    <p>Random projects from James Powers</p>
+</header>
+
+<section class="apps-section">
+    {% if apps %}
+        <div class="apps-grid">
+            {% for app in apps %}
+                {% include 'components/app_card.html' %}
+            {% endfor %}
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 4rem 0;">
+            <p style="font-size: 1.8rem; color: #606c76;">
+                No applications available yet. Check back soon!
+            </p>
+        </div>
+    {% endif %}
+</section>
+{% endblock %}
