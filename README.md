@@ -1,8 +1,8 @@
 # aux-analytics
-Random projects from James Powers
+By James Powers
 
 ## Overview
-This is a container Flask application designed to hold multiple sub-applications. The goal is to consolidate infrastructure in one core project and rapidly produce new blueprints for different features.
+Auxiliary Analytics is a song voting website for our annual Song Bracket Tournament. It utilizes a mixture of YouTube and Spotify API calls to serve links for individuals voting during the tournament and a vehicle to track and store votes that are placed during the tournament as well. 
 
 ## Architecture
 The project follows a Flask blueprint and services architecture:
