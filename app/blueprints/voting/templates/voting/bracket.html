@@ -3,137 +3,189 @@
 {% block title %}Bracket - Auxiliary Analytics{% endblock %}
 
 {% block content %}
-<div class="hero hero-sm bg-gray">
-    <div class="hero-body text-center">
-        <h1>Tournament Bracket - Round 1</h1>
-        <p class="text-gray">Vote for your favorites</p>
+<section class="section is-small">
+    <div class="has-text-centered">
+        <h1 class="title is-4">Tournament Bracket - Round 1</h1>
+        <!-- <p class="subtitle is-6">Vote for your favorites</p> -->
     </div>
-</div>
-
-<div class="bracket-container">
-    <div class="bracket-round">
-        <div class="columns">
-            <div class="column col-6 col-sm-12">
+</section>
+<section>
+    <div class="bracket-container">
+        <div class="columns is-multiline">
+            <div class="column is-half">
                 <div class="card matchup-card">
-                    <div class="card-header">
-                        <div class="card-title h5">Matchup 1</div>
-                    </div>
-                    <div class="card-body">
+                    <header class="card-header">
+                        <p class="card-header-title is-size-6">Matchup 1</p>
+                    </header>
+                    <div class="card-content">
                         <div class="matchup-option">
-                            <label class="form-radio">
+                            <label class="radio">
                                 <input type="radio" name="match-1" value="song1">
-                                <i class="form-icon"></i> Song Title 1
+                                <strong>Song Title 1</strong>
                             </label>
-                            <div class="song-details text-gray">Artist Name • Album</div>
+                            <div class="key-value-pair">
+                                <span class="key">Artist:</span>
+                                <span class="values">Artist Name</span>
+                            </div>
+                            <div class="key-value-pair">
+                                <span class="key">Album:</span>
+                                <span class="values">Album Name</span>
+                            </div>
                         </div>
-                        <div class="divider"></div>
+                        <hr class="matchup-divider">
                         <div class="matchup-option">
-                            <label class="form-radio">
+                            <label class="radio">
                                 <input type="radio" name="match-1" value="song2">
-                                <i class="form-icon"></i> Song Title 2
+                                <strong>Song Title 2</strong>
                             </label>
-                            <div class="song-details text-gray">Artist Name • Album</div>
+                            <div class="key-value-pair">
+                                <span class="key">Artist:</span>
+                                <span class="values">Artist Name</span>
+                            </div>
+                            <div class="key-value-pair">
+                                <span class="key">Album:</span>
+                                <span class="values">Album Name</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary btn-block">Submit Vote</button>
-                    </div>
+                    <footer class="card-footer">
+                        <a class="card-footer-item button is-primary is-small">Submit Vote</a>
+                    </footer>
                 </div>
             </div>
 
-            <div class="column col-6 col-sm-12">
+            <div class="column is-half">
                 <div class="card matchup-card">
-                    <div class="card-header">
-                        <div class="card-title h5">Matchup 2</div>
-                    </div>
-                    <div class="card-body">
+                    <header class="card-header">
+                        <p class="card-header-title is-size-6">Matchup 2</p>
+                    </header>
+                    <div class="card-content">
                         <div class="matchup-option">
-                            <label class="form-radio">
+                            <label class="radio">
                                 <input type="radio" name="match-2" value="song3">
-                                <i class="form-icon"></i> Song Title 3
+                                <strong>Song Title 3</strong>
                             </label>
-                            <div class="song-details text-gray">Artist Name • Album</div>
+                            <div class="key-value-pair">
+                                <span class="key">Artist:</span>
+                                <span class="values">Artist Name</span>
+                            </div>
+                            <div class="key-value-pair">
+                                <span class="key">Album:</span>
+                                <span class="values">Album Name</span>
+                            </div>
                         </div>
-                        <div class="divider"></div>
+                        <hr class="matchup-divider">
                         <div class="matchup-option">
-                            <label class="form-radio">
+                            <label class="radio">
                                 <input type="radio" name="match-2" value="song4">
-                                <i class="form-icon"></i> Song Title 4
+                                <strong>Song Title 4</strong>
                             </label>
-                            <div class="song-details text-gray">Artist Name • Album</div>
+                            <div class="key-value-pair">
+                                <span class="key">Artist:</span>
+                                <span class="values">Artist Name</span>
+                            </div>
+                            <div class="key-value-pair">
+                                <span class="key">Album:</span>
+                                <span class="values">Album Name</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary btn-block">Submit Vote</button>
-                    </div>
+                    <footer class="card-footer">
+                        <a class="card-footer-item button is-primary is-small">Submit Vote</a>
+                    </footer>
                 </div>
             </div>
-        </div>
 
-        <div class="columns">
-            <div class="column col-6 col-sm-12">
+            <div class="column is-half">
                 <div class="card matchup-card">
-                    <div class="card-header">
-                        <div class="card-title h5">Matchup 3</div>
-                    </div>
-                    <div class="card-body">
+                    <header class="card-header">
+                        <p class="card-header-title is-size-6">Matchup 3</p>
+                    </header>
+                    <div class="card-content">
                         <div class="matchup-option">
-                            <label class="form-radio">
+                            <label class="radio">
                                 <input type="radio" name="match-3" value="song5">
-                                <i class="form-icon"></i> Song Title 5
+                                <strong>Song Title 5</strong>
                             </label>
-                            <div class="song-details text-gray">Artist Name • Album</div>
+                            <div class="key-value-pair">
+                                <span class="key">Artist:</span>
+                                <span class="values">Artist Name</span>
+                            </div>
+                            <div class="key-value-pair">
+                                <span class="key">Album:</span>
+                                <span class="values">Album Name</span>
+                            </div>
                         </div>
-                        <div class="divider"></div>
+                        <hr class="matchup-divider">
                         <div class="matchup-option">
-                            <label class="form-radio">
+                            <label class="radio">
                                 <input type="radio" name="match-3" value="song6">
-                                <i class="form-icon"></i> Song Title 6
+                                <strong>Song Title 6</strong>
                             </label>
-                            <div class="song-details text-gray">Artist Name • Album</div>
+                            <div class="key-value-pair">
+                                <span class="key">Artist:</span>
+                                <span class="values">Artist Name</span>
+                            </div>
+                            <div class="key-value-pair">
+                                <span class="key">Album:</span>
+                                <span class="values">Album Name</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary btn-block">Submit Vote</button>
-                    </div>
+                    <footer class="card-footer">
+                        <a class="card-footer-item button is-primary is-small">Submit Vote</a>
+                    </footer>
                 </div>
             </div>
 
-            <div class="column col-6 col-sm-12">
+            <div class="column is-half">
                 <div class="card matchup-card">
-                    <div class="card-header">
-                        <div class="card-title h5">Matchup 4</div>
-                    </div>
-                    <div class="card-body">
+                    <header class="card-header">
+                        <p class="card-header-title is-size-6">Matchup 4</p>
+                    </header>
+                    <div class="card-content">
                         <div class="matchup-option">
-                            <label class="form-radio">
+                            <label class="radio">
                                 <input type="radio" name="match-4" value="song7">
-                                <i class="form-icon"></i> Song Title 7
+                                <strong>Song Title 7</strong>
                             </label>
-                            <div class="song-details text-gray">Artist Name • Album</div>
+                            <div class="key-value-pair">
+                                <span class="key">Artist:</span>
+                                <span class="values">Artist Name</span>
+                            </div>
+                            <div class="key-value-pair">
+                                <span class="key">Album:</span>
+                                <span class="values">Album Name</span>
+                            </div>
                         </div>
-                        <div class="divider"></div>
+                        <hr class="matchup-divider">
                         <div class="matchup-option">
-                            <label class="form-radio">
+                            <label class="radio">
                                 <input type="radio" name="match-4" value="song8">
-                                <i class="form-icon"></i> Song Title 8
+                                <strong>Song Title 8</strong>
                             </label>
-                            <div class="song-details text-gray">Artist Name • Album</div>
+                            <div class="key-value-pair">
+                                <span class="key">Artist:</span>
+                                <span class="values">Artist Name</span>
+                            </div>
+                            <div class="key-value-pair">
+                                <span class="key">Album:</span>
+                                <span class="values">Album Name</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="card-footer">
-                        <button class="btn btn-primary btn-block">Submit Vote</button>
-                    </div>
+                    <footer class="card-footer">
+                        <a class="card-footer-item button is-primary is-small">Submit Vote</a>
+                    </footer>
                 </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 
-<div class="divider"></div>
-<p class="text-center">
-    <a href="{{ url_for('main.index') }}" class="btn btn-link">
-        <i class="icon icon-arrow-left"></i> Back to Home
+<div class="has-text-centered mt-4">
+    <a href="{{ url_for('main.index') }}" class="button is-link is-light is-small">
+        ← Back to Home
     </a>
-</p>
+</div>
 {% endblock %}

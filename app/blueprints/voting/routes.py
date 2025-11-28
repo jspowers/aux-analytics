@@ -11,3 +11,4 @@ def bracket():
         {'round': 2, 'song5': 'Winner 1', 'song6': 'Winner 2'},
     ]
     return render_template('voting/bracket.html', matchups=mock_matchups)
+

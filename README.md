@@ -10,10 +10,10 @@ The project follows a Flask blueprint and services architecture:
 - **Services** (`app/services/`) - Business logic layer
 - **Models** (`app/models/`) - Database models
 - **Application Factory** - Clean app initialization with `create_app()`
-- **UI Framework** - Spectre CSS for lightweight, modern styling
-  - Core: `spectre.min.css` - Base styles and components
-  - Experimental: `spectre-exp.min.css` - Advanced components
-  - Icons: `spectre-icons.min.css` - Icon support
+- **UI Framework** - Bulma CSS for modern, responsive styling
+  - Lightweight and mobile-first design
+  - Card-based layout with key-value pair patterns
+  - Flexible grid system
 
 ## Development Guidelines
 Simplified development instructions are available in `.claude/instructions/`:
@@ -37,8 +37,8 @@ This is currently a minimal viable product with:
 - Infrastructure: EC2, Nginx, Gunicorn, SSL
 - Authentication: Simple password protection
 - Navigation: Homepage and voting bracket pages
-- UI Framework: Spectre CSS for lightweight, responsive design
-- Bracket Interface: Navigatable tournament rounds with tab-based navigation
+- UI Framework: Bulma CSS for lightweight, responsive design
+- Bracket Interface: Card-based matchup display with condensed layout
 
 **Coming Next:**
 - SQLite database integration
