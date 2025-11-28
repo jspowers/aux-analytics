@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Auxiliary Analytics{% endblock %}</title>
+
+    <!-- Spectre CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-exp.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-icons.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <section class="navbar-section">
+            <a href="{{ url_for('main.index') }}" class="navbar-brand mr-2">Auxiliary Analytics</a>
+            <a href="{{ url_for('main.index') }}" class="btn btn-link">Home</a>
+            <a href="{{ url_for('voting.bracket') }}" class="btn btn-link">Bracket</a>
+        </section>
+        <section class="navbar-section">
+            <a href="{{ url_for('logout') }}" class="btn btn-link">Logout</a>
+        </section>
+    </header>
+
+    <div class="container grid-lg">
+
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer>
+            <p>&copy; 2025 Auxiliary Analytics by James Powers</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

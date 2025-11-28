@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Auxiliary Analytics{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <h2>Welcome to the Song Bracket Tournament!</h2>
+    <p>This is the homepage for our annual song voting competition.</p>
+    <p>Navigate to the <a href="{{ url_for('voting.bracket') }}">Bracket</a> to see the tournament structure.</p>
+</section>
+
+<section>
+    <h3>How It Works</h3>
+    <ol>
+        <li>Songs are matched up in head-to-head competitions</li>
+        <li>Vote for your favorite in each matchup</li>
+        <li>Winners advance to the next round</li>
+        <li>The ultimate champion is crowned!</li>
+    </ol>
+</section>
+
+<section>
+    <h3>MVP Status</h3>
+    <p><strong>Note:</strong> This is a minimal viable product to validate our infrastructure. Voting functionality will be added in future releases.</p>
+</section>
+{% endblock %}
