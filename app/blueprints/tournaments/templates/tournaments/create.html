@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Create Tournament - Auxiliary Analytics
+{% endblock %}
+
+{% block content %}
+<section class="section is-small">
+    <div class="columns is-centered">
+        <div class="column is-half-desktop is-two-thirds-tablet">
+            <div class="card">
+                <header class="card-header">
+                    <p class="card-header-title">
+                        Create New Tournament
+                    </p>
+                </header>
+
+                <div class="card-content">
+                    <form method="POST" action="{{ url_for('tournaments.create') }}">
+                        {{ form.hidden_tag() }}
+
+                        <!-- Tournament Name -->
+                        <div class="field">
+                            <label class="label">{{ form.name.label }}</label>
+                            <div class="control">
+                                {{ form.name(class="input" + (" is-danger" if form.name.errors else ""), placeholder="e.g., Summer 2025 Song Tournament") }}
+                            </div>
+                            {% if form.name.errors %}
+                                {% for error in form.name.errors %}
+                                    <p class="help is-danger">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+
+                        <!-- Description -->
+                        <div class="field">
+                            <label class="label">{{ form.description.label }}</label>
+                            <div class="control">
+                                {{ form.description(class="textarea", rows=4, placeholder="Describe your tournament...") }}
+                            </div>
+                            {% if form.description.errors %}
+                                {% for error in form.description.errors %}
+                                    <p class="help is-danger">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+
+                        <hr>
+
+                        <!-- Registration Deadline -->
+                        <div class="field">
+                            <label class="label">Registration Deadline</label>
+                            <div class="field has-addons">
+                                <div class="control is-expanded">
+                                    {{ form.registration_deadline_date(class="input" + (" is-danger" if form.registration_deadline_date.errors else "")) }}
+                                </div>
+                                <div class="control">
+                                    {{ form.registration_deadline_time(class="input" + (" is-danger" if form.registration_deadline_time.errors else "")) }}
+                                </div>
+                            </div>
+                            {% if form.registration_deadline_date.errors %}
+                                {% for error in form.registration_deadline_date.errors %}
+                                    <p class="help is-danger">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                            <p class="help">Last day and time for song submissions</p>
+                        </div>
+
+                        <!-- Voting Start Date -->
+                        <div class="field">
+                            <label class="label">Voting Start</label>
+                            <div class="field has-addons">
+                                <div class="control is-expanded">
+                                    {{ form.voting_start_date(class="input" + (" is-danger" if form.voting_start_date.errors else "")) }}
+                                </div>
+                                <div class="control">
+                                    {{ form.voting_start_time(class="input" + (" is-danger" if form.voting_start_time.errors else "")) }}
+                                </div>
+                            </div>
+                            {% if form.voting_start_date.errors %}
+                                {% for error in form.voting_start_date.errors %}
+                                    <p class="help is-danger">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                            <p class="help">When voting begins (must be after registration deadline)</p>
+                        </div>
+
+                        <!-- Voting End Date -->
+                        <div class="field">
+                            <label class="label">Voting End</label>
+                            <div class="field has-addons">
+                                <div class="control is-expanded">
+                                    {{ form.voting_end_date(class="input" + (" is-danger" if form.voting_end_date.errors else "")) }}
+                                </div>
+                                <div class="control">
+                                    {{ form.voting_end_time(class="input" + (" is-danger" if form.voting_end_time.errors else "")) }}
+                                </div>
+                            </div>
+                            {% if form.voting_end_date.errors %}
+                                {% for error in form.voting_end_date.errors %}
+                                    <p class="help is-danger">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                            <p class="help">When voting closes (must be after voting start)</p>
+                        </div>
+
+                        <hr>
+
+                        <!-- Submit Buttons -->
+                        <div class="field">
+                            <div class="control">
+                                {{ form.submit(class="button is-primary") }}
+                                <a href="{{ url_for('tournaments.list') }}" class="button is-light">Cancel</a>
+                            </div>
+                        </div>
+
+                        <!-- Info Box -->
+                        <div class="notification is-info is-light mt-4">
+                            <p><strong>Note:</strong> The tournament year will be automatically set to current year. Rounds will be generated based on the number of song submissions.</p>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

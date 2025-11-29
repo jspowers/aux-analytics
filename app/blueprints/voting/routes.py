@@ -1,7 +1,9 @@
 from flask import render_template
+from flask_login import login_required
 from app.blueprints.voting import voting_bp
 
 @voting_bp.route('/bracket')
+@login_required
 def bracket():
     """Placeholder voting bracket page"""
     # Mock data for MVP

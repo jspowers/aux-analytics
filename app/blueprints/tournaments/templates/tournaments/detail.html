@@ -1,0 +1,144 @@
+{% extends "tournament_base.html" %}
+
+{% block title %}
+    {{ tournament.name }} - Auxiliary Analytics
+{% endblock %}
+
+{% block tournament_content %}
+<section class="section is-small">
+    <div class="container">
+        <div class="card">
+            <header class="card-header">
+                <p class="card-header-title">
+                    {{ tournament.name }}
+                    {% if tournament.year %}
+                        ({{ tournament.year }})
+                    {% endif %}
+                </p>
+            </header>
+
+            <div class="card-content">
+                <div class="content">
+                    {% if tournament.description %}
+                        <p class="mb-4">{{ tournament.description }}</p>
+                    {% endif %}
+
+                    <div class="key-value-pair">
+                        <span class="key">Status:</span>
+                        <span class="values">
+                            <span class="tag {% if tournament.status == 'active' %}is-success{% elif tournament.status == 'pending' %}is-warning{% else %}is-light{% endif %}">
+                                {{ tournament.status|capitalize }}
+                            </span>
+                        </span>
+                    </div>
+
+                    {% if tournament.registration_deadline %}
+                        <div class="key-value-pair">
+                            <span class="key">Registration Deadline:</span>
+                            <span class="values">{{ tournament.registration_deadline|strftime('%B %d, %Y at %I:%M %p') }}</span>
+                        </div>
+                    {% endif %}
+
+                    {% if tournament.voting_start_date %}
+                        <div class="key-value-pair">
+                            <span class="key">Voting Starts:</span>
+                            <span class="values">{{ tournament.voting_start_date|strftime('%B %d, %Y at %I:%M %p') }}</span>
+                        </div>
+                    {% endif %}
+
+                    {% if tournament.voting_end_date %}
+                        <div class="key-value-pair">
+                            <span class="key">Voting Ends:</span>
+                            <span class="values">{{ tournament.voting_end_date|strftime('%B %d, %Y at %I:%M %p') }}</span>
+                        </div>
+                    {% endif %}
+
+                    <div class="key-value-pair">
+                        <span class="key">Total Songs:</span>
+                        <span class="values">{{ tournament.songs.count() }}</span>
+                    </div>
+
+                    <div class="key-value-pair">
+                        <span class="key">Created:</span>
+                        <span class="values">{{ tournament.created_at.strftime('%B %d, %Y') }}</span>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="buttons">
+                    {% if current_user.is_authenticated and tournament.is_registration_open() %}
+                        <a href="{{ url_for('tournaments.submit_song', id=tournament.id) }}" class="button is-primary">
+                            Submit a Song
+                        </a>
+                    {% endif %}
+
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('tournaments.my_submissions', id=tournament.id) }}" class="button is-link">
+                            My Submissions
+                        </a>
+                    {% endif %}
+
+                    <a href="{{ url_for('voting.bracket') }}" class="button is-info">
+                        View Bracket
+                    </a>
+                </div>
+
+                <hr>
+
+                <h3 class="title is-5">Submitted Songs ({{ tournament.songs.count() }})</h3>
+                {% if tournament.songs.count() > 0 %}
+                    <div class="content">
+                        {% for song in tournament.songs %}
+                            <div class="box mb-2">
+                                <div class="key-value-pair">
+                                    <span class="key">Song:</span>
+                                    <span class="values"><strong>{{ song.title }}</strong></span>
+                                </div>
+                                <div class="key-value-pair">
+                                    <span class="key">Artist:</span>
+                                    <span class="values">{{ song.artist }}</span>
+                                </div>
+                                {% if song.album %}
+                                    <div class="key-value-pair">
+                                        <span class="key">Album:</span>
+                                        <span class="values">{{ song.album }}</span>
+                                    </div>
+                                {% endif %}
+                                {% if song.duration_seconds %}
+                                    <div class="key-value-pair">
+                                        <span class="key">Duration:</span>
+                                        <span class="values">{{ song.duration_seconds // 60 }}:{{ '%02d' % (song.duration_seconds % 60) }}</span>
+                                    </div>
+                                {% endif %}
+                                <div class="key-value-pair">
+                                    <span class="key">Submitted by:</span>
+                                    <span class="values">{{ song.submitted_by.name }}</span>
+                                </div>
+                                {% if song.spotify_url %}
+                                    <div class="mt-2">
+                                        <a href="{{ song.spotify_url }}" target="_blank" class="button is-small is-success">
+                                            Listen on Spotify
+                                        </a>
+                                    </div>
+                                {% endif %}
+                                {% if song.youtube_url %}
+                                    <div class="mt-2">
+                                        <a href="{{ song.youtube_url }}" target="_blank" class="button is-small is-danger">
+                                            Watch on YouTube
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="notification is-light">
+                        No songs submitted yet. Be the first to submit!
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

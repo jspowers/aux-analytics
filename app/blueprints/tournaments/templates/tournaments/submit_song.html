@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Submit Song - {{ tournament.name }} - Auxiliary Analytics
+{% endblock %}
+
+{% block content %}
+<section class="section is-small">
+    <div class="columns is-centered">
+        <div class="column is-half-desktop is-two-thirds-tablet">
+            <div class="card">
+                <header class="card-header">
+                    <p class="card-header-title">
+                        Submit a Song to {{ tournament.name }}
+                    </p>
+                </header>
+
+                <div class="card-content">
+                    <form method="POST" action="{{ url_for('tournaments.submit_song', id=tournament.id) }}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="field">
+                            <label class="label">{{ form.submission_method.label }}</label>
+                            <div class="control">
+                                <div class="select is-fullwidth">
+                                    {{ form.submission_method(class="") }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="manual-fields" style="display: none;">
+                            <div class="field">
+                                <label class="label">{{ form.title.label }}</label>
+                                <div class="control">
+                                    {{ form.title(class="input" + (" is-danger" if form.title.errors else "")) }}
+                                </div>
+                                {% if form.title.errors %}
+                                    {% for error in form.title.errors %}
+                                        <p class="help is-danger">{{ error }}</p>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <div class="field">
+                                <label class="label">{{ form.artist.label }}</label>
+                                <div class="control">
+                                    {{ form.artist(class="input" + (" is-danger" if form.artist.errors else "")) }}
+                                </div>
+                                {% if form.artist.errors %}
+                                    {% for error in form.artist.errors %}
+                                        <p class="help is-danger">{{ error }}</p>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <div class="field">
+                                <label class="label">{{ form.album.label }}</label>
+                                <div class="control">
+                                    {{ form.album(class="input") }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="spotify-fields" style="display: none;">
+                            <div class="field">
+                                <label class="label">{{ form.spotify_url.label }}</label>
+                                <div class="control">
+                                    {{ form.spotify_url(class="input" + (" is-danger" if form.spotify_url.errors else ""), placeholder="https://open.spotify.com/track/...") }}
+                                </div>
+                                {% if form.spotify_url.errors %}
+                                    {% for error in form.spotify_url.errors %}
+                                        <p class="help is-danger">{{ error }}</p>
+                                    {% endfor %}
+                                {% endif %}
+                                <p class="help">Paste a Spotify track URL and we'll fetch the song details automatically</p>
+                            </div>
+                        </div>
+
+                        <div id="youtube-fields" style="display: none;">
+                            <div class="field">
+                                <label class="label">{{ form.youtube_url.label }}</label>
+                                <div class="control">
+                                    {{ form.youtube_url(class="input" + (" is-danger" if form.youtube_url.errors else ""), placeholder="https://www.youtube.com/watch?v=...") }}
+                                </div>
+                                {% if form.youtube_url.errors %}
+                                    {% for error in form.youtube_url.errors %}
+                                        <p class="help is-danger">{{ error }}</p>
+                                    {% endfor %}
+                                {% endif %}
+                                <p class="help">Paste a YouTube video URL and we'll fetch the song details automatically</p>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <div class="control">
+                                {{ form.submit(class="button is-primary") }}
+                                <a href="{{ url_for('tournaments.detail', id=tournament.id) }}" class="button is-light">Cancel</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    // Show/hide form fields based on submission method
+    const submissionMethodSelect = document.querySelector('select[name="submission_method"]');
+    const manualFields = document.getElementById('manual-fields');
+    const spotifyFields = document.getElementById('spotify-fields');
+    const youtubeFields = document.getElementById('youtube-fields');
+
+    function updateVisibleFields() {
+        const method = submissionMethodSelect.value;
+
+        manualFields.style.display = method === 'manual' ? 'block' : 'none';
+        spotifyFields.style.display = method === 'spotify' ? 'block' : 'none';
+        youtubeFields.style.display = method === 'youtube' ? 'block' : 'none';
+    }
+
+    submissionMethodSelect.addEventListener('change', updateVisibleFields);
+
+    // Initialize on page load
+    updateVisibleFields();
+</script>
+{% endblock %}

@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if mode == 'login' %}
+        Login
+    {% elif mode == 'register' %}
+        Register
+    {% elif mode == 'account' %}
+        My Account
+    {% endif %} - Auxiliary Analytics
+{% endblock %}
+
+{% block content %}
+<section class="section is-small">
+    <div class="columns is-centered">
+        <div class="column is-half-desktop is-two-thirds-tablet">
+            <div class="card">
+                <header class="card-header">
+                    <p class="card-header-title">
+                        {% if mode == 'login' %}
+                            Login
+                        {% elif mode == 'register' %}
+                            Create Account
+                        {% elif mode == 'account' %}
+                            My Account
+                        {% endif %}
+                    </p>
+                </header>
+
+                <div class="card-content">
+                    {% if mode == 'login' %}
+                        {# Login Form #}
+                        <form method="POST" action="{{ url_for('auth.login') }}">
+                            {{ form.hidden_tag() }}
+
+                            <div class="field">
+                                <label class="label">{{ form.email.label }}</label>
+                                <div class="control">
+                                    {{ form.email(class="input" + (" is-danger" if form.email.errors else "")) }}
+                                </div>
+                                {% if form.email.errors %}
+                                    {% for error in form.email.errors %}
+                                        <p class="help is-danger">{{ error }}</p>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <div class="field">
+                                <label class="label">{{ form.password.label }}</label>
+                                <div class="control">
+                                    {{ form.password(class="input" + (" is-danger" if form.password.errors else "")) }}
+                                </div>
+                                {% if form.password.errors %}
+                                    {% for error in form.password.errors %}
+                                        <p class="help is-danger">{{ error }}</p>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <div class="field">
+                                <label class="checkbox">
+                                    {{ form.remember_me() }} {{ form.remember_me.label.text }}
+                                </label>
+                            </div>
+
+                            <div class="field">
+                                <div class="control">
+                                    {{ form.submit(class="button is-primary") }}
+                                </div>
+                            </div>
+                        </form>
+
+                        <div class="content mt-4">
+                            <p class="has-text-centered">
+                                Don't have an account? <a href="{{ url_for('auth.register') }}">Register here</a>
+                            </p>
+                        </div>
+
+                    {% elif mode == 'register' %}
+                        {# Registration Form #}
+                        <form method="POST" action="{{ url_for('auth.register') }}">
+                            {{ form.hidden_tag() }}
+
+                            <div class="field">
+                                <label class="label">{{ form.name.label }}</label>
+                                <div class="control">
+                                    {{ form.name(class="input" + (" is-danger" if form.name.errors else "")) }}
+                                </div>
+                                {% if form.name.errors %}
+                                    {% for error in form.name.errors %}
+                                        <p class="help is-danger">{{ error }}</p>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <div class="field">
+                                <label class="label">{{ form.email.label }}</label>
+                                <div class="control">
+                                    {{ form.email(class="input" + (" is-danger" if form.email.errors else "")) }}
+                                </div>
+                                {% if form.email.errors %}
+                                    {% for error in form.email.errors %}
+                                        <p class="help is-danger">{{ error }}</p>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <div class="field">
+                                <label class="label">{{ form.password.label }}</label>
+                                <div class="control">
+                                    {{ form.password(class="input" + (" is-danger" if form.password.errors else "")) }}
+                                </div>
+                                {% if form.password.errors %}
+                                    {% for error in form.password.errors %}
+                                        <p class="help is-danger">{{ error }}</p>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <div class="field">
+                                <label class="label">{{ form.password_confirm.label }}</label>
+                                <div class="control">
+                                    {{ form.password_confirm(class="input" + (" is-danger" if form.password_confirm.errors else "")) }}
+                                </div>
+                                {% if form.password_confirm.errors %}
+                                    {% for error in form.password_confirm.errors %}
+                                        <p class="help is-danger">{{ error }}</p>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+
+                            <div class="field">
+                                <div class="control">
+                                    {{ form.submit(class="button is-primary") }}
+                                </div>
+                            </div>
+                        </form>
+
+                        <div class="content mt-4">
+                            <p class="has-text-centered">
+                                Already have an account? <a href="{{ url_for('auth.login') }}">Login here</a>
+                            </p>
+                        </div>
+
+                    {% elif mode == 'account' %}
+                        {# Account Information #}
+                        <div class="content">
+                            <div class="key-value-pair">
+                                <span class="key">Name:</span>
+                                <span class="values">{{ user.name }}</span>
+                            </div>
+                            <div class="key-value-pair">
+                                <span class="key">Email:</span>
+                                <span class="values">{{ user.email }}</span>
+                            </div>
+                            <div class="key-value-pair">
+                                <span class="key">Member Since:</span>
+                                <span class="values">{{ user.created_at.strftime('%B %d, %Y') }}</span>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <h3 class="title is-5">My Song Submissions</h3>
+                        {% if songs %}
+                            <div class="content">
+                                {% for song in songs %}
+                                    <div class="box mb-2">
+                                        <div class="key-value-pair">
+                                            <span class="key">Song:</span>
+                                            <span class="values"><strong>{{ song.title }}</strong></span>
+                                        </div>
+                                        <div class="key-value-pair">
+                                            <span class="key">Artist:</span>
+                                            <span class="values">{{ song.artist }}</span>
+                                        </div>
+                                        {% if song.album %}
+                                        <div class="key-value-pair">
+                                            <span class="key">Album:</span>
+                                            <span class="values">{{ song.album }}</span>
+                                        </div>
+                                        {% endif %}
+                                        <div class="key-value-pair">
+                                            <span class="key">Tournament:</span>
+                                            <span class="values">
+                                                <a href="{{ url_for('tournaments.detail', id=song.tournament_id) }}">
+                                                    {{ song.tournament.name }}
+                                                </a>
+                                            </span>
+                                        </div>
+                                        <div class="key-value-pair">
+                                            <span class="key">Submitted:</span>
+                                            <span class="values">{{ song.created_at.strftime('%B %d, %Y') }}</span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="notification is-light">
+                                You haven't submitted any songs yet. <a href="{{ url_for('tournaments.list') }}">Browse tournaments</a> to get started!
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

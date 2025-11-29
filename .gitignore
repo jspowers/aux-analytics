@@ -1,3 +1,6 @@
+# Personal notes
+temp.md
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -213,3 +216,11 @@ terraform/.terraform/
 terraform/*.tfstate
 terraform/*.tfstate.backup
 terraform/.terraform.lock.hcl
+
+# Database files
+app.db
+*.db
+*.db-journal
+
+# Flask-Migrate
+migrations/

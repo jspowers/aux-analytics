@@ -1,0 +1,74 @@
+{% extends "tournament_base.html" %}
+
+{% block title %}
+    Tournaments - Auxiliary Analytics
+{% endblock %}
+
+{% block tournament_content %}
+<section class="section is-small">
+    <div class="container">
+        <h1 class="title">Tournaments</h1>
+
+        
+
+        {% if tournaments %}
+            <div class="columns is-multiline">
+                {% for tournament in tournaments %}
+                    <div class="column is-one-third">
+                        <div class="card">
+                            <header class="card-header">
+                                <p class="card-header-title">
+                                    {{ tournament.name }}
+                                    {% if tournament.year %}
+                                        ({{ tournament.year }})
+                                    {% endif %}
+                                </p>
+                            </header>
+
+                            <div class="card-content">
+                                <div class="content">
+                                    {% if tournament.description %}
+                                        <p>{{ tournament.description }}</p>
+                                    {% endif %}
+
+                                    <div class="key-value-pair">
+                                        <span class="key">Status:</span>
+                                        <span class="values">
+                                            <span class="tag {% if tournament.status == 'active' %}is-success{% elif tournament.status == 'pending' %}is-warning{% else %}is-light{% endif %}">
+                                                {{ tournament.status|capitalize }}
+                                            </span>
+                                        </span>
+                                    </div>
+
+                                    {% if tournament.registration_deadline %}
+                                        <div class="key-value-pair">
+                                            <span class="key">Registration Ends:</span>
+                                            <span class="values">{{ tournament.registration_deadline.strftime('%B %d, %Y') }}</span>
+                                        </div>
+                                    {% endif %}
+
+                                    <div class="key-value-pair">
+                                        <span class="key">Songs:</span>
+                                        <span class="values">{{ tournament.songs.count() }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <footer class="card-footer">
+                                <a href="{{ url_for('tournaments.detail', id=tournament.id) }}" class="card-footer-item">View Details</a>
+                                {% if current_user.is_authenticated and tournament.is_registration_open() %}
+                                    <a href="{{ url_for('tournaments.submit_song', id=tournament.id) }}" class="card-footer-item">Submit Song</a>
+                                {% endif %}
+                            </footer>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="notification is-light">
+                No tournaments available yet. Check back soon!
+            </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

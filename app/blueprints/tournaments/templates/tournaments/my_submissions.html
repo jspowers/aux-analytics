@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+
+{% block title %}
+    My Submissions - {{ tournament.name }} - Auxiliary Analytics
+{% endblock %}
+
+{% block content %}
+<section class="section is-small">
+    <div class="container">
+        <div class="card">
+            <header class="card-header">
+                <p class="card-header-title">
+                    My Submissions for {{ tournament.name }}
+                </p>
+            </header>
+
+            <div class="card-content">
+                {% if songs %}
+                    <div class="content">
+                        {% for song in songs %}
+                            <div class="box mb-2">
+                                <div class="key-value-pair">
+                                    <span class="key">Song:</span>
+                                    <span class="values"><strong>{{ song.title }}</strong></span>
+                                </div>
+                                <div class="key-value-pair">
+                                    <span class="key">Artist:</span>
+                                    <span class="values">{{ song.artist }}</span>
+                                </div>
+                                {% if song.album %}
+                                    <div class="key-value-pair">
+                                        <span class="key">Album:</span>
+                                        <span class="values">{{ song.album }}</span>
+                                    </div>
+                                {% endif %}
+                                {% if song.duration_seconds %}
+                                    <div class="key-value-pair">
+                                        <span class="key">Duration:</span>
+                                        <span class="values">{{ song.duration_seconds // 60 }}:{{ '%02d' % (song.duration_seconds % 60) }}</span>
+                                    </div>
+                                {% endif %}
+                                <div class="key-value-pair">
+                                    <span class="key">Submitted:</span>
+                                    <span class="values">{{ song.created_at.strftime('%B %d, %Y at %I:%M %p') }}</span>
+                                </div>
+                                <div class="key-value-pair">
+                                    <span class="key">Submission Method:</span>
+                                    <span class="values">
+                                        <span class="tag is-info">{{ song.submission_method|capitalize }}</span>
+                                    </span>
+                                </div>
+                                {% if song.spotify_url %}
+                                    <div class="mt-2">
+                                        <a href="{{ song.spotify_url }}" target="_blank" class="button is-small is-success">
+                                            Listen on Spotify
+                                        </a>
+                                    </div>
+                                {% endif %}
+                                {% if song.youtube_url %}
+                                    <div class="mt-2">
+                                        <a href="{{ song.youtube_url }}" target="_blank" class="button is-small is-danger">
+                                            Watch on YouTube
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="notification is-light">
+                        You haven't submitted any songs to this tournament yet.
+                        {% if tournament.is_registration_open() %}
+                            <a href="{{ url_for('tournaments.submit_song', id=tournament.id) }}">Submit a song now!</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <div class="buttons mt-4">
+                    <a href="{{ url_for('tournaments.detail', id=tournament.id) }}" class="button is-light">Back to Tournament</a>
+                    {% if tournament.is_registration_open() %}
+                        <a href="{{ url_for('tournaments.submit_song', id=tournament.id) }}" class="button is-primary">Submit Another Song</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
