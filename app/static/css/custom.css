@@ -1,5 +1,8 @@
 /* Custom styles for aux-analytics */
 
+@media (prefers-color-scheme: light) {
+}
+
 /* Global spacing - make everything more condensed */
 body {
     font-size: 0.85rem;
@@ -84,23 +87,23 @@ footer {
 /* Key-value pair styling - from reference design */
 .key-value-pair {
     margin-bottom: 0.25rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
 }
+
 
 .key {
     display: inline-block;
-    width: 20%;
-    font-weight: 500;
-    color: #4a4a4a;
-    font-size: 0.8rem;
+    width: 40%;
+    vertical-align: top;
 }
 
 .values {
     display: inline-block;
-    width: 75%;
+    width: 60%;
     word-wrap: break-word;
     padding-left: 1rem;
-    color: #7a7a7a;
-    font-size: 0.8rem;
 }
 
 /* Matchup divider */
@@ -132,12 +135,7 @@ footer {
         margin-bottom: 0.75rem;
     }
 
-    .key {
-        width: 25%;
-    }
-
-    .values {
-        width: 70%;
-        padding-left: 0.5rem;
+    .key-value-pair {
+        gap: 0.25rem;
     }
 }

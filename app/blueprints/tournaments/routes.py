@@ -3,15 +3,27 @@ from flask import render_template, redirect, url_for, flash, current_app
 from flask_login import login_required, current_user
 from app.blueprints.tournaments import tournaments_bp
 from app.blueprints.tournaments.forms import SongSubmissionForm, TournamentCreationForm
-from app.models import Tournament, Song
+from app.models import Tournament, Song, Registration
 from app.extensions import db
-from datetime import datetime
 
 
 @tournaments_bp.route('/')
+@login_required
 def list():
     """List all tournaments"""
-    tournaments = Tournament.query.order_by(Tournament.created_at.desc()).all()
+    from sqlalchemy.orm import joinedload
+
+    # Get tournaments created by the user OR where they have registered
+    # Use eager loading to fetch registrations and users in the same query
+    tournaments = Tournament.query.options(
+        joinedload(Tournament.registrations).joinedload(Registration.user)
+    ).filter(
+        db.or_(
+            Tournament.created_by_user_id == current_user.id,
+            Tournament.registrations.any(Registration.user_id == current_user.id)
+        )
+    ).order_by(Tournament.created_at.desc()).all()
+
     return render_template('tournaments/list.html', tournaments=tournaments)
 
 @tournaments_bp.route('/create', methods=['GET', 'POST'])
@@ -22,25 +34,45 @@ def create():
 
     if form.validate_on_submit():
         try:
-            # Create tournament with Unix timestamps
+            from datetime import datetime
+
             tournament = Tournament(
+                tournament_code=Tournament.generate_unique_code(),
                 name=form.name.data,
                 description=form.description.data,
-                year=datetime.utcnow().year,  # Auto-set to current year
+                year=datetime.now().year,
                 status='registration',
                 registration_deadline=form.get_registration_deadline_timestamp(),
-                voting_start_date=form.get_voting_start_timestamp(),
-                voting_end_date=form.get_voting_end_timestamp(),
+                max_submissions_per_user=form.max_submissions_per_user.data,
                 created_by_user_id=current_user.id
             )
 
+            # Associate by object (do not rely on tournament.id yet)
+            registrant = Registration(
+                user_id=current_user.id,
+            )
+            registrant.tournament = tournament
+
+            # Atomic transaction: commit both or neither
+           
             db.session.add(tournament)
-            db.session.commit()
+            db.session.add(registrant)
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                raise
 
-            flash('Tournament created successfully!', 'success')
+            flash(
+                f'Tournament created successfully! Code: {tournament.formatted_code}', 
+                'success'
+                )
+            
             return redirect(url_for('tournaments.detail', id=tournament.id))
-
+            
         except Exception as e:
+            # db.session.begin() will rollback automatically on exception,
+            # but you can still call rollback here to be explicit
             db.session.rollback()
             flash(f'Error creating tournament: {str(e)}', 'danger')
             return render_template('tournaments/create.html', form=form)
@@ -51,7 +83,15 @@ def create():
 def detail(id):
     """Tournament detail page"""
     tournament = Tournament.query.get_or_404(id)
-    return render_template('tournaments/detail.html', tournament=tournament)
+
+    # Add submission count if user is authenticated
+    user_submission_count = None
+    if current_user.is_authenticated:
+        user_submission_count = tournament.get_user_submission_count(current_user.id)
+
+    return render_template('tournaments/detail.html',
+                          tournament=tournament,
+                          user_submission_count=user_submission_count)
 
 
 @tournaments_bp.route('/<int:id>/submit', methods=['GET', 'POST'])
@@ -63,6 +103,11 @@ def submit_song(id):
     if not tournament.is_registration_open():
         flash('Registration is closed for this tournament', 'danger')
         return redirect(url_for('tournaments.detail', id=id))
+
+    # Check submission limit
+    if not tournament.user_can_submit_more(current_user.id):
+        flash(f'You have reached the submission limit of {tournament.max_submissions_per_user} songs for this tournament', 'warning')
+        return redirect(url_for('tournaments.my_submissions', id=id))
 
     form = SongSubmissionForm()
     if form.validate_on_submit():
@@ -93,14 +138,22 @@ def submit_song(id):
                     song_data.update(metadata)
             except Exception as e:
                 flash(f'Error fetching metadata: {str(e)}', 'danger')
-                return render_template('tournaments/submit_song.html', form=form, tournament=tournament)
+                user_submission_count = tournament.get_user_submission_count(current_user.id)
+                return render_template('tournaments/submit_song.html',
+                                      form=form,
+                                      tournament=tournament,
+                                      user_submission_count=user_submission_count)
 
         # Create song
         song = Song(
             title=song_data['title'],
             artist=song_data['artist'],
             album=song_data.get('album'),
+            release_date=song_data.get('release_date'),
+            release_date_precision=song_data.get('release_date_precision'),
+            popularity=song_data.get('popularity'),
             duration_seconds=song_data.get('duration_seconds'),
+            isrc_number=song_data.get('isrc_number'),
             spotify_url=song_data.get('spotify_url'),
             youtube_url=song_data.get('youtube_url'),
             spotify_track_id=song_data.get('spotify_track_id'),
@@ -117,7 +170,13 @@ def submit_song(id):
         flash('Song submitted successfully!', 'success')
         return redirect(url_for('tournaments.detail', id=id))
 
-    return render_template('tournaments/submit_song.html', form=form, tournament=tournament)
+    # Get user's current submission count for display
+    user_submission_count = tournament.get_user_submission_count(current_user.id)
+
+    return render_template('tournaments/submit_song.html',
+                          form=form,
+                          tournament=tournament,
+                          user_submission_count=user_submission_count)
 
 
 @tournaments_bp.route('/<int:id>/my-submissions')
@@ -129,5 +188,40 @@ def my_submissions(id):
         tournament_id=id,
         submitted_by_user_id=current_user.id
     ).all()
+
+    user_submission_count = len(songs)
+
     return render_template('tournaments/my_submissions.html',
-                         tournament=tournament, songs=songs)
+                         tournament=tournament,
+                         songs=songs,
+                         user_submission_count=user_submission_count)
+
+
+@tournaments_bp.route('/<int:tournament_id>/delete-song/<int:song_id>', methods=['POST'])
+@login_required
+def delete_song(tournament_id, song_id):
+    """Delete a user's submitted song from a tournament"""
+    tournament = Tournament.query.get_or_404(tournament_id)
+    song = Song.query.get_or_404(song_id)
+
+    # Verify song belongs to current user and this tournament
+    if song.submitted_by_user_id != current_user.id:
+        flash('You can only delete your own submissions', 'danger')
+        return redirect(url_for('tournaments.my_submissions', id=tournament_id))
+
+    if song.tournament_id != tournament_id:
+        flash('Invalid song for this tournament', 'danger')
+        return redirect(url_for('tournaments.my_submissions', id=tournament_id))
+
+    # Check if tournament is still in registration phase
+    if not tournament.is_registration_open():
+        flash('Cannot delete submissions after registration closes', 'danger')
+        return redirect(url_for('tournaments.my_submissions', id=tournament_id))
+
+    # Delete the song
+    song_title = song.title  # Store for flash message
+    db.session.delete(song)
+    db.session.commit()
+
+    flash(f'Successfully deleted "{song_title}"', 'success')
+    return redirect(url_for('tournaments.my_submissions', id=tournament_id))

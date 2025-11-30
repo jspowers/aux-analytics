@@ -6,7 +6,11 @@
 
 {% block content %}
 <div class="level mt-2 mb-2 ml-2">
-  <a class="button is-small is-primary" href="{{ url_for('tournaments.create') }}">Create Tournament</a>
+    <div class="level-left">
+        <div class="level-item">
+            <a class="button is-small is-primary" href="{{ url_for('tournaments.create') }}">Create Tournament</a>
+        </div>
+    </div>
 </div>
 
 {% block tournament_content %}

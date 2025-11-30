@@ -15,6 +15,15 @@
             </header>
 
             <div class="card-content">
+                <div class="notification {% if user_submission_count >= tournament.max_submissions_per_user %}is-warning{% else %}is-info{% endif %} is-light mb-4">
+                    <strong>You have submitted {{ user_submission_count }} of {{ tournament.max_submissions_per_user }} songs</strong>
+                    {% if user_submission_count < tournament.max_submissions_per_user %}
+                        <br><small>You can submit {{ tournament.max_submissions_per_user - user_submission_count }} more song(s).</small>
+                    {% else %}
+                        <br><small>You have reached your submission limit. Delete a song below to submit a different one.</small>
+                    {% endif %}
+                </div>
+
                 {% if songs %}
                     <div class="content">
                         {% for song in songs %}
@@ -41,7 +50,7 @@
                                 {% endif %}
                                 <div class="key-value-pair">
                                     <span class="key">Submitted:</span>
-                                    <span class="values">{{ song.created_at.strftime('%B %d, %Y at %I:%M %p') }}</span>
+                                    <span class="values">{{ song.created_at|strftime('%B %d, %Y at %I:%M %p') }}</span>
                                 </div>
                                 <div class="key-value-pair">
                                     <span class="key">Submission Method:</span>
@@ -63,6 +72,17 @@
                                         </a>
                                     </div>
                                 {% endif %}
+                                {% if tournament.is_registration_open() %}
+                                    <div class="mt-2">
+                                        <form method="POST" action="{{ url_for('tournaments.delete_song', tournament_id=tournament.id, song_id=song.id) }}"
+                                              onsubmit="return confirm('Are you sure you want to delete &quot;{{ song.title }}&quot;? This cannot be undone.');">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <button type="submit" class="button is-small is-danger is-light">
+                                                Delete Submission
+                                            </button>
+                                        </form>
+                                    </div>
+                                {% endif %}
                             </div>
                         {% endfor %}
                     </div>
@@ -78,7 +98,11 @@
                 <div class="buttons mt-4">
                     <a href="{{ url_for('tournaments.detail', id=tournament.id) }}" class="button is-light">Back to Tournament</a>
                     {% if tournament.is_registration_open() %}
-                        <a href="{{ url_for('tournaments.submit_song', id=tournament.id) }}" class="button is-primary">Submit Another Song</a>
+                        {% if user_submission_count < tournament.max_submissions_per_user %}
+                            <a href="{{ url_for('tournaments.submit_song', id=tournament.id) }}" class="button is-primary">Submit Another Song</a>
+                        {% else %}
+                            <button class="button is-primary" disabled title="Submission limit reached">Submit Another Song (Limit Reached)</button>
+                        {% endif %}
                     {% endif %}
                 </div>
             </div>

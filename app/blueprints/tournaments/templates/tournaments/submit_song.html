@@ -6,122 +6,173 @@
 
 {% block content %}
 <section class="section is-small">
-    <div class="columns is-centered">
-        <div class="column is-half-desktop is-two-thirds-tablet">
-            <div class="card">
-                <header class="card-header">
-                    <p class="card-header-title">
-                        Submit a Song to {{ tournament.name }}
-                    </p>
-                </header>
+    <div class="container">
+        <div class="card">
+            <header class="card-header">
+                <p class="card-header-title">
+                    Submit a Song to {{ tournament.name }}
+                </p>
+            </header>
 
-                <div class="card-content">
-                    <form method="POST" action="{{ url_for('tournaments.submit_song', id=tournament.id) }}">
-                        {{ form.hidden_tag() }}
-
-                        <div class="field">
-                            <label class="label">{{ form.submission_method.label }}</label>
-                            <div class="control">
-                                <div class="select is-fullwidth">
-                                    {{ form.submission_method(class="") }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="manual-fields" style="display: none;">
-                            <div class="field">
-                                <label class="label">{{ form.title.label }}</label>
-                                <div class="control">
-                                    {{ form.title(class="input" + (" is-danger" if form.title.errors else "")) }}
-                                </div>
-                                {% if form.title.errors %}
-                                    {% for error in form.title.errors %}
-                                        <p class="help is-danger">{{ error }}</p>
-                                    {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <div class="field">
-                                <label class="label">{{ form.artist.label }}</label>
-                                <div class="control">
-                                    {{ form.artist(class="input" + (" is-danger" if form.artist.errors else "")) }}
-                                </div>
-                                {% if form.artist.errors %}
-                                    {% for error in form.artist.errors %}
-                                        <p class="help is-danger">{{ error }}</p>
-                                    {% endfor %}
-                                {% endif %}
-                            </div>
-
-                            <div class="field">
-                                <label class="label">{{ form.album.label }}</label>
-                                <div class="control">
-                                    {{ form.album(class="input") }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="spotify-fields" style="display: none;">
-                            <div class="field">
-                                <label class="label">{{ form.spotify_url.label }}</label>
-                                <div class="control">
-                                    {{ form.spotify_url(class="input" + (" is-danger" if form.spotify_url.errors else ""), placeholder="https://open.spotify.com/track/...") }}
-                                </div>
-                                {% if form.spotify_url.errors %}
-                                    {% for error in form.spotify_url.errors %}
-                                        <p class="help is-danger">{{ error }}</p>
-                                    {% endfor %}
-                                {% endif %}
-                                <p class="help">Paste a Spotify track URL and we'll fetch the song details automatically</p>
-                            </div>
-                        </div>
-
-                        <div id="youtube-fields" style="display: none;">
-                            <div class="field">
-                                <label class="label">{{ form.youtube_url.label }}</label>
-                                <div class="control">
-                                    {{ form.youtube_url(class="input" + (" is-danger" if form.youtube_url.errors else ""), placeholder="https://www.youtube.com/watch?v=...") }}
-                                </div>
-                                {% if form.youtube_url.errors %}
-                                    {% for error in form.youtube_url.errors %}
-                                        <p class="help is-danger">{{ error }}</p>
-                                    {% endfor %}
-                                {% endif %}
-                                <p class="help">Paste a YouTube video URL and we'll fetch the song details automatically</p>
-                            </div>
-                        </div>
-
-                        <div class="field">
-                            <div class="control">
-                                {{ form.submit(class="button is-primary") }}
-                                <a href="{{ url_for('tournaments.detail', id=tournament.id) }}" class="button is-light">Cancel</a>
-                            </div>
-                        </div>
-                    </form>
+            <div class="card-content">
+                <div class="notification is-info is-light mb-4">
+                    <strong>Submissions: {{ user_submission_count }} of {{ tournament.max_submissions_per_user }}</strong>
+                    <br>
+                    <small>You have {{ tournament.max_submissions_per_user - user_submission_count }} submission(s) remaining.</small>
                 </div>
+
+                <form method="POST" action="{{ url_for('tournaments.submit_song', id=tournament.id) }}">
+                    {{ form.hidden_tag() }}
+
+                    <!-- Submission Method Radio Buttons -->
+                    <div class="field">
+                        <label class="label">{{ form.submission_method.label }}</label>
+                        <div class="control">
+                            {% for subfield in form.submission_method %}
+                                <label class="radio">
+                                    {{ subfield }}
+                                    {{ subfield.label.text }}
+                                </label>
+                            {% endfor %}
+                        </div>
+                        <p class="help">Choose how you'd like to submit your song</p>
+                    </div>
+
+                    <hr>
+
+                    <!-- Manual Entry Fields -->
+                    <!-- <div class="box" id="manual-fields">
+                        <h3 class="subtitle is-5">Manual Entry</h3>
+
+                        <div class="field">
+                            <label class="label">{{ form.title.label }}</label>
+                            <div class="control">
+                                {{ form.title(class="input" + (" is-danger" if form.title.errors else ""), id="manual-title") }}
+                            </div>
+                            {% if form.title.errors %}
+                                {% for error in form.title.errors %}
+                                    <p class="help is-danger">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+
+                        <div class="field">
+                            <label class="label">{{ form.artist.label }}</label>
+                            <div class="control">
+                                {{ form.artist(class="input" + (" is-danger" if form.artist.errors else ""), id="manual-artist") }}
+                            </div>
+                            {% if form.artist.errors %}
+                                {% for error in form.artist.errors %}
+                                    <p class="help is-danger">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+
+                        <div class="field">
+                            <label class="label">{{ form.album.label }}</label>
+                            <div class="control">
+                                {{ form.album(class="input", id="manual-album") }}
+                            </div>
+                            <p class="help">Optional</p>
+                        </div>
+                    </div> -->
+
+                    <!-- Spotify URL Field -->
+                    <div class="box" id="spotify-fields">
+                        <h3 class="subtitle is-5">Spotify</h3>
+
+                        <div class="field">
+                            <label class="label">{{ form.spotify_url.label }}</label>
+                            <div class="control">
+                                {{ form.spotify_url(class="input" + (" is-danger" if form.spotify_url.errors else ""), placeholder="https://open.spotify.com/track/...", id="spotify-url") }}
+                            </div>
+                            {% if form.spotify_url.errors %}
+                                {% for error in form.spotify_url.errors %}
+                                    <p class="help is-danger">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                            <p class="help">Paste a Spotify track URL and we'll fetch the song details automatically</p>
+                        </div>
+                    </div>
+
+                    <!-- YouTube URL Field -->
+                    <!-- <div class="box" id="youtube-fields">
+                        <h3 class="subtitle is-5">YouTube</h3>
+
+                        <div class="field">
+                            <label class="label">{{ form.youtube_url.label }}</label>
+                            <div class="control">
+                                {{ form.youtube_url(class="input" + (" is-danger" if form.youtube_url.errors else ""), placeholder="https://www.youtube.com/watch?v=...", id="youtube-url") }}
+                            </div>
+                            {% if form.youtube_url.errors %}
+                                {% for error in form.youtube_url.errors %}
+                                    <p class="help is-danger">{{ error }}</p>
+                                {% endfor %}
+                            {% endif %}
+                            <p class="help">Paste a YouTube video URL and we'll fetch the song details automatically</p>
+                        </div>
+                    </div> -->
+
+                    <hr>
+
+                    <!-- Submit Buttons -->
+                    <div class="field is-grouped">
+                        <div class="control">
+                            {{ form.submit(class="button is-primary") }}
+                        </div>
+                        <div class="control">
+                            <a href="{{ url_for('tournaments.detail', id=tournament.id) }}" class="button is-light">Cancel</a>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 </section>
 
 <script>
-    // Show/hide form fields based on submission method
-    const submissionMethodSelect = document.querySelector('select[name="submission_method"]');
+    // Enable/disable form fields based on submission method
+    const submissionMethodRadios = document.querySelectorAll('input[name="submission_method"]');
     const manualFields = document.getElementById('manual-fields');
     const spotifyFields = document.getElementById('spotify-fields');
     const youtubeFields = document.getElementById('youtube-fields');
 
-    function updateVisibleFields() {
-        const method = submissionMethodSelect.value;
+    // Field elements
+    const manualTitle = document.getElementById('manual-title');
+    const manualArtist = document.getElementById('manual-artist');
+    const manualAlbum = document.getElementById('manual-album');
+    const spotifyUrl = document.getElementById('spotify-url');
+    const youtubeUrl = document.getElementById('youtube-url');
 
-        manualFields.style.display = method === 'manual' ? 'block' : 'none';
-        spotifyFields.style.display = method === 'spotify' ? 'block' : 'none';
-        youtubeFields.style.display = method === 'youtube' ? 'block' : 'none';
+    function updateFieldStates() {
+        const selectedMethod = document.querySelector('input[name="submission_method"]:checked').value;
+
+        // Reset all fields first
+        [manualTitle, manualArtist, manualAlbum, spotifyUrl, youtubeUrl].forEach(field => {
+            field.disabled = true;
+            field.parentElement.parentElement.parentElement.style.opacity = '0.5';
+        });
+
+        // Enable fields based on selected method
+        if (selectedMethod === 'spotify') {
+            spotifyUrl.disabled = false;
+            spotifyFields.style.opacity = '1';
+        } else if (selectedMethod === 'youtube') {
+            youtubeUrl.disabled = false;
+            youtubeFields.style.opacity = '1';
+        } else if (selectedMethod === 'manual') {
+            manualTitle.disabled = false;
+            manualArtist.disabled = false;
+            manualAlbum.disabled = false;
+            manualFields.style.opacity = '1';
+        }
     }
 
-    submissionMethodSelect.addEventListener('change', updateVisibleFields);
+    submissionMethodRadios.forEach(radio => {
+        radio.addEventListener('change', updateFieldStates);
+    });
 
     // Initialize on page load
-    updateVisibleFields();
+    updateFieldStates();
 </script>
 {% endblock %}

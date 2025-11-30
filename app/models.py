@@ -1,5 +1,4 @@
 """Database models for Auxiliary Analytics"""
-from datetime import datetime
 import time
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
@@ -14,7 +13,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     name = db.Column(db.String(100), nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.Integer, default=lambda: int(time.time()), nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
 
     # Relationships
@@ -43,19 +42,22 @@ class Tournament(db.Model):
     __tablename__ = 'tournaments'
 
     id = db.Column(db.Integer, primary_key=True)
+    tournament_code = db.Column(db.String(4), unique=True, nullable=False, index=True)  # 4-digit alphanumeric code
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     year = db.Column(db.Integer, index=True)
     status = db.Column(db.String(20), default='registration', nullable=False)  # registration, voting, completed
     registration_deadline = db.Column(db.Integer, nullable=False)  # Unix timestamp
-    voting_start_date = db.Column(db.Integer, nullable=False)  # Unix timestamp
-    voting_end_date = db.Column(db.Integer, nullable=False)  # Unix timestamp
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    voting_start_date = db.Column(db.Integer)  # Unix timestamp (optional)
+    voting_end_date = db.Column(db.Integer)  # Unix timestamp (optional)
+    max_submissions_per_user = db.Column(db.Integer, default=4, nullable=False)
+    created_at = db.Column(db.Integer, default=lambda: int(time.time()), nullable=False)  # Unix timestamp
     created_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
 
     # Relationships
     songs = db.relationship('Song', backref='tournament', lazy='dynamic')
-    rounds = db.relationship('Round', backref='tournament', lazy='dynamic', order_by='Round.round_number')
+    registrations = db.relationship('Registration', backref='tournament', lazy='selectin', cascade='all, delete-orphan')
+    rounds = db.relationship('Round', backref='tournament', lazy='dynamic', order_by='Round.round_number', cascade='all, delete-orphan')
     creator = db.relationship('User', backref='created_tournaments', foreign_keys=[created_by_user_id])
 
     def is_registration_open(self):
@@ -88,8 +90,82 @@ class Tournament(db.Model):
         # Calculate rounds needed for single-elimination bracket
         return math.ceil(math.log2(song_count))
 
+    @property
+    def formatted_code(self):
+        """Return tournament code formatted with pound sign"""
+        return f"#{self.tournament_code}"
+
+    def get_registered_users(self):
+        """Get list of User objects who are registered for this tournament"""
+        return [reg.user for reg in self.registrations]
+
+    def get_registered_user_names(self):
+        """Get comma-separated string of registered user names"""
+        users = self.get_registered_users()
+        if not users:
+            return "No registrants yet"
+        return ", ".join([user.name for user in users])
+
+    def get_registration_count(self):
+        """Get count of registered users"""
+        return len(self.registrations)
+
+    def get_user_submission_count(self, user_id):
+        """Get count of songs submitted by a specific user for this tournament"""
+        return self.songs.filter_by(submitted_by_user_id=user_id).count()
+
+    def user_can_submit_more(self, user_id):
+        """Check if user can submit more songs to this tournament"""
+        current_count = self.get_user_submission_count(user_id)
+        return current_count < self.max_submissions_per_user
+
+    def get_remaining_submissions(self, user_id):
+        """Get number of submissions remaining for a user"""
+        current_count = self.get_user_submission_count(user_id)
+        remaining = self.max_submissions_per_user - current_count
+        return max(0, remaining)
+
+    @staticmethod
+    def generate_unique_code():
+        """Generate a unique 4-character alphanumeric tournament code"""
+        import random
+
+        # Use uppercase letters and digits for better readability
+        # Exclude confusing characters: 0, O, I, 1
+        chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
+
+        max_attempts = 100
+        for _ in range(max_attempts):
+            code = ''.join(random.choice(chars) for _ in range(4))
+            # Check if code already exists
+            if not Tournament.query.filter_by(tournament_code=code).first():
+                return code
+
+        # If we couldn't find a unique code after max_attempts, raise an error
+        raise ValueError("Unable to generate unique tournament code")
+
     def __repr__(self):
         return f'<Tournament {self.name} ({self.year})>'
+
+class Registration(db.Model):
+    """Registration model for tournament participants"""
+    __tablename__ = 'registrations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    registered_at = db.Column(db.Integer, default=lambda: int(time.time()), nullable=False)
+
+    # Relationships
+    user = db.relationship('User', backref='tournament_registrations')
+
+    # Unique constraint: one round number per tournament
+    __table_args__ = (
+        db.UniqueConstraint('tournament_id', 'user_id', name='uq_tournament_user_registration'),
+    )
+
+    def __repr__(self):
+        return f'<Registration U{self.user_id} T{self.tournament_id}>'
 
 
 class Round(db.Model):
@@ -101,9 +177,9 @@ class Round(db.Model):
     round_number = db.Column(db.Integer, nullable=False)  # 1, 2, 3...
     name = db.Column(db.String(100))  # e.g., "Round of 16", "Quarterfinals", "Semifinals", "Finals"
     status = db.Column(db.String(20), default='pending', nullable=False)  # pending, active, completed
-    start_date = db.Column(db.DateTime)
-    end_date = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    start_date = db.Column(db.Integer)  # Unix timestamp
+    end_date = db.Column(db.Integer)  # Unix timestamp
+    created_at = db.Column(db.Integer, default=lambda: int(time.time()), nullable=False)
 
     # Relationships
     matchups = db.relationship('Matchup', backref='round', lazy='dynamic', cascade='all, delete-orphan')
@@ -117,7 +193,7 @@ class Round(db.Model):
         """Check if this round is currently active for voting"""
         if self.status != 'active':
             return False
-        now = datetime.utcnow()
+        now = int(time.time())
         if self.start_date and now < self.start_date:
             return False
         if self.end_date and now > self.end_date:
@@ -136,7 +212,11 @@ class Song(db.Model):
     title = db.Column(db.String(200), nullable=False)
     artist = db.Column(db.String(200), nullable=False)
     album = db.Column(db.String(200))
+    release_date = db.Column(db.String(200))
+    release_date_precision = db.Column(db.String(200))
+    popularity = db.Column(db.Integer)
     duration_seconds = db.Column(db.Integer)
+    isrc_number = db.Column(db.String(500))
     spotify_url = db.Column(db.String(500))
     youtube_url = db.Column(db.String(500))
     spotify_track_id = db.Column(db.String(100), index=True)
@@ -145,7 +225,7 @@ class Song(db.Model):
     submission_method = db.Column(db.String(20), nullable=False)  # manual, spotify, youtube
     submitted_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.Integer, default=lambda: int(time.time()), nullable=False)
 
     # Unique constraint to prevent exact duplicates per user per tournament
     __table_args__ = (
@@ -189,7 +269,7 @@ class Matchup(db.Model):
     winner_song_id = db.Column(db.Integer, db.ForeignKey('songs.id'))  # Nullable until voting completes
     next_matchup_id = db.Column(db.Integer, db.ForeignKey('matchups.id'))  # Self-referential for bracket progression
     status = db.Column(db.String(20), default='pending', nullable=False)  # pending, active, completed
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.Integer, default=lambda: int(time.time()), nullable=False)
 
     # Relationships
     votes = db.relationship('Vote', backref='matchup', lazy='dynamic', cascade='all, delete-orphan')
@@ -228,7 +308,7 @@ class Vote(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     matchup_id = db.Column(db.Integer, db.ForeignKey('matchups.id'), nullable=False)
     song_id = db.Column(db.Integer, db.ForeignKey('songs.id'), nullable=False)  # The song voted for
-    voted_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    voted_at = db.Column(db.Integer, default=lambda: int(time.time()), nullable=False)
 
     # Unique constraint to prevent duplicate votes
     __table_args__ = (

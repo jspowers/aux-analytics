@@ -1,9 +1,10 @@
 """Tournament forms"""
 from flask_wtf import FlaskForm
-from wtforms import StringField, URLField, RadioField, SubmitField, TextAreaField, DateField, TimeField
-from wtforms.validators import DataRequired, URL, Optional, Length, ValidationError
-from datetime import datetime, time as time_type
+from wtforms import StringField, URLField, RadioField, SubmitField, TextAreaField, DateField, TimeField, IntegerField
+from wtforms.validators import DataRequired, URL, Optional, Length, ValidationError, NumberRange
+from datetime import datetime, time as time_type, timedelta
 import time
+import pytz
 
 
 class SongSubmissionForm(FlaskForm):
@@ -55,66 +56,46 @@ class TournamentCreationForm(FlaskForm):
     """Tournament creation form"""
     name = StringField('Tournament Name', validators=[DataRequired(), Length(max=200)])
     description = TextAreaField('Description', validators=[Optional()])
+    max_submissions_per_user = IntegerField(
+        'Maximum Submissions Per User',
+        validators=[DataRequired(), NumberRange(min=1, max=20, message='Must be between 1 and 20')],
+        default=4
+    )
 
-    # Registration deadline
+    # Registration deadline with defaults
     registration_deadline_date = DateField('Registration Deadline Date', validators=[DataRequired()])
     registration_deadline_time = TimeField('Registration Deadline Time', validators=[DataRequired()])
 
-    # Voting start
-    voting_start_date = DateField('Voting Start Date', validators=[DataRequired()])
-    voting_start_time = TimeField('Voting Start Time', validators=[DataRequired()])
-
-    # Voting end
-    voting_end_date = DateField('Voting End Date', validators=[DataRequired()])
-    voting_end_time = TimeField('Voting End Time', validators=[DataRequired()])
-
     submit = SubmitField('Create Tournament')
 
-    def validate(self, extra_validators=None):
-        """Custom validation for date ordering"""
-        if not super().validate(extra_validators):
-            return False
+    def __init__(self, *args, **kwargs):
+        """Initialize form with default values"""
+        super(TournamentCreationForm, self).__init__(*args, **kwargs)
 
-        # Combine date + time fields into timestamps
-        try:
-            reg_deadline = self._combine_datetime(self.registration_deadline_date.data,
-                                                  self.registration_deadline_time.data)
-            voting_start = self._combine_datetime(self.voting_start_date.data,
-                                                  self.voting_start_time.data)
-            voting_end = self._combine_datetime(self.voting_end_date.data,
-                                               self.voting_end_time.data)
-        except Exception as e:
-            self.registration_deadline_date.errors.append('Invalid date/time values')
-            return False
+        # Set defaults only if form is not being submitted (i.e., initial load)
+        if not self.is_submitted():
+            # Get current time in Eastern timezone
+            eastern = pytz.timezone('America/New_York')
+            now_eastern = datetime.now(eastern)
 
-        # Validate: voting_start >= registration_deadline
-        if voting_start < reg_deadline:
-            self.voting_start_date.errors.append('Voting start must be after registration deadline')
-            return False
+            # Registration deadline: 2 days from now at 3 AM Eastern
+            deadline_date = (now_eastern + timedelta(days=2)).date()
+            deadline_time = time_type(3, 0)  # 3:00 AM
 
-        # Validate: voting_end > voting_start
-        if voting_end <= voting_start:
-            self.voting_end_date.errors.append('Voting end must be after voting start')
-            return False
-
-        return True
+            self.registration_deadline_date.data = deadline_date
+            self.registration_deadline_time.data = deadline_time
 
     def _combine_datetime(self, date_obj, time_obj):
-        """Combine date and time into Unix timestamp"""
+        """Combine date and time into Unix timestamp (Eastern timezone)"""
+        # Create naive datetime
         dt = datetime.combine(date_obj, time_obj)
-        return int(time.mktime(dt.timetuple()))
+        # Localize to Eastern timezone
+        eastern = pytz.timezone('America/New_York')
+        dt_eastern = eastern.localize(dt)
+        # Convert to Unix timestamp
+        return int(dt_eastern.timestamp())
 
     def get_registration_deadline_timestamp(self):
         """Get registration deadline as Unix timestamp"""
         return self._combine_datetime(self.registration_deadline_date.data,
                                       self.registration_deadline_time.data)
-
-    def get_voting_start_timestamp(self):
-        """Get voting start as Unix timestamp"""
-        return self._combine_datetime(self.voting_start_date.data,
-                                      self.voting_start_time.data)
-
-    def get_voting_end_timestamp(self):
-        """Get voting end as Unix timestamp"""
-        return self._combine_datetime(self.voting_end_date.data,
-                                      self.voting_end_time.data)

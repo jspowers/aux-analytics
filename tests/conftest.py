@@ -50,16 +50,23 @@ def authenticated_client(client, test_user):
 def test_tournament(app):
     """Create a test tournament"""
     with app.app_context():
-        from datetime import datetime, timedelta
+        import time
+        # Unix timestamps for test tournament
+        now = int(time.time())
+        seven_days = 7 * 24 * 60 * 60
         tournament = Tournament(
+            tournament_code=Tournament.generate_unique_code(),
             name='Test Tournament 2025',
             description='A test tournament',
             year=2025,
             status='active',
-            registration_deadline=datetime.utcnow() + timedelta(days=7)
+            registration_deadline=now + seven_days,
+            max_submissions_per_user=4,
+            created_by_user_id=1
         )
         db.session.add(tournament)
         db.session.commit()
         tournament_id = tournament.id
+        tournament_code = tournament.tournament_code
     # Return a dictionary with tournament data instead of the ORM object
-    return {'id': tournament_id, 'name': 'Test Tournament 2025'}
+    return {'id': tournament_id, 'name': 'Test Tournament 2025', 'code': tournament_code}

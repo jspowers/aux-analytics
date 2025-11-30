@@ -9,12 +9,10 @@
     <div class="container">
         <div class="card">
             <header class="card-header">
-                <p class="card-header-title">
-                    {{ tournament.name }}
-                    {% if tournament.year %}
-                        ({{ tournament.year }})
-                    {% endif %}
-                </p>
+                <p class="card-header-title">{{ tournament.name }}</p>
+                <div style="padding: var(--bulma-card-header-padding);">
+                    #{{ tournament.tournament_code }}
+                </div>                                
             </header>
 
             <div class="card-content">
@@ -59,8 +57,37 @@
                     </div>
 
                     <div class="key-value-pair">
+                        <span class="key">Submission Limit:</span>
+                        <span class="values">{{ tournament.max_submissions_per_user }} songs per user</span>
+                    </div>
+
+                    {% if current_user.is_authenticated and user_submission_count is not none %}
+                        <div class="key-value-pair">
+                            <span class="key">Your Submissions:</span>
+                            <span class="values">
+                                <strong>{{ user_submission_count }} of {{ tournament.max_submissions_per_user }}</strong>
+                                {% if user_submission_count >= tournament.max_submissions_per_user %}
+                                    <span class="tag is-warning ml-2">Limit Reached</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    {% endif %}
+
+                    <div class="key-value-pair">
                         <span class="key">Created:</span>
-                        <span class="values">{{ tournament.created_at.strftime('%B %d, %Y') }}</span>
+                        <span class="values">{{ tournament.created_at|strftime('%B %d, %Y') }}</span>
+                    </div>
+
+                    <!-- Count of registrants -->
+                    <div class="key-value-pair">
+                        <strong class="key">Registrants:</strong>
+                        <span class="values">{{ tournament.get_registration_count() }}</span>
+                    </div>
+
+                    <!-- Names of registrants -->
+                    <div class="key-value-pair">
+                        <strong class="key">Registered Users:</strong>
+                        <span class="values">{{ tournament.get_registered_user_names() }}</span>
                     </div>
                 </div>
 
@@ -68,9 +95,16 @@
 
                 <div class="buttons">
                     {% if current_user.is_authenticated and tournament.is_registration_open() %}
-                        <a href="{{ url_for('tournaments.submit_song', id=tournament.id) }}" class="button is-primary">
-                            Submit a Song
-                        </a>
+                        {% if tournament.user_can_submit_more(current_user.id) %}
+                            <a href="{{ url_for('tournaments.submit_song', id=tournament.id) }}" class="button is-primary">
+                                Submit a Song
+                            </a>
+                        {% else %}
+                            <button class="button is-primary" disabled title="You have reached the submission limit">
+                                Submit a Song (Limit Reached)
+                            </button>
+                            <p class="help has-text-danger">You have submitted {{ user_submission_count }} of {{ tournament.max_submissions_per_user }} songs. Delete a submission to add a different song.</p>
+                        {% endif %}
                     {% endif %}
 
                     {% if current_user.is_authenticated %}

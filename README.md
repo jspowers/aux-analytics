@@ -46,6 +46,7 @@ These guidelines are tailored for personal projects - keeping best practices whi
 - Tournament creation with:
   - Name and description
   - Registration deadline (date and time)
+  - Configurable submission limit per user (1-20 songs, default: 4)
   - Voting start and end dates
   - Auto-set year to current year
   - Date validation (voting must be after registration, voting end after start)
@@ -56,6 +57,10 @@ These guidelines are tailored for personal projects - keeping best practices whi
   - Manual entry (title, artist, album)
   - Spotify URL with automatic metadata fetching
   - YouTube URL with automatic metadata fetching
+- Song submission limits:
+  - Users see submission progress: "X of Y songs" on tournament pages
+  - Users can delete submissions during registration to submit different songs
+  - Submit button automatically disables when limit is reached with clear messaging
 - User can view their own submissions per tournament
 - Registration deadline enforcement
 - Round auto-generation based on song count (infrastructure ready)

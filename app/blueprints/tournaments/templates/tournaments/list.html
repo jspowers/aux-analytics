@@ -9,51 +9,69 @@
     <div class="container">
         <h1 class="title">Tournaments</h1>
 
-        
-
         {% if tournaments %}
-            <div class="columns is-multiline">
+            <div class="grid is-col-min-10">
                 {% for tournament in tournaments %}
-                    <div class="column is-one-third">
+                    <div class="cell">
                         <div class="card">
+                            <!-- CARD HEADER -->
                             <header class="card-header">
-                                <p class="card-header-title">
-                                    {{ tournament.name }}
-                                    {% if tournament.year %}
-                                        ({{ tournament.year }})
-                                    {% endif %}
-                                </p>
+                                <p class="card-header-title">{{ tournament.name }}</p>
+                                <div style="padding: var(--bulma-card-header-padding);">
+                                    #{{ tournament.tournament_code }}
+                                </div>                                
                             </header>
-
+                            
+                            <!-- CARD CONTENT -->
                             <div class="card-content">
-                                <div class="content">
-                                    {% if tournament.description %}
-                                        <p>{{ tournament.description }}</p>
-                                    {% endif %}
-
-                                    <div class="key-value-pair">
-                                        <span class="key">Status:</span>
-                                        <span class="values">
-                                            <span class="tag {% if tournament.status == 'active' %}is-success{% elif tournament.status == 'pending' %}is-warning{% else %}is-light{% endif %}">
-                                                {{ tournament.status|capitalize }}
-                                            </span>
-                                        </span>
-                                    </div>
-
-                                    {% if tournament.registration_deadline %}
-                                        <div class="key-value-pair">
-                                            <span class="key">Registration Ends:</span>
-                                            <span class="values">{{ tournament.registration_deadline.strftime('%B %d, %Y') }}</span>
+                                <div class="columns">
+                                    <div class="column is-12">
+                                        
+                                        <!-- DESCRIPTION -->
+                                        <div class="key-value-pair is-family-code is-size-7	">
+                                            <strong class="key">Description: </strong>
+                                            <span class="values">{{ tournament.description }}</span>
                                         </div>
-                                    {% endif %}
 
-                                    <div class="key-value-pair">
-                                        <span class="key">Songs:</span>
-                                        <span class="values">{{ tournament.songs.count() }}</span>
+                                        <!-- TOURNAMENT DETAILS -->
+                                        <div class="key-value-pair is-family-code is-size-7	">
+                                            <strong class="key">Status:</strong>
+                                            <span class="values">
+                                                <span class="tag {% if tournament.status == 'active' %}is-success{% elif tournament.status == 'pending' %}is-warning{% else %}is-light{% endif %}">
+                                                    {{ tournament.status|capitalize }}
+                                                </span>
+                                            </span>
+                                        </div>
+
+                                        <!-- REGISTRATION DEADLINE -->
+                                        <div class="key-value-pair is-family-code is-size-7	">
+                                            <strong class="key">Registration Ends:</strong>
+                                            <span class="values">{{ tournament.registration_deadline|strftime('%B %d, %Y') }}</span>
+                                        </div>
+
+                                        <!-- NUMBER OF SONGS -->
+                                        <div class="key-value-pair is-family-code is-size-7	">
+                                            <strong class="key">Songs:</strong>
+                                            <span class="values">{{ tournament.songs.count() }}</span>
+                                        </div>
+                                         
+                                        <!-- Count of registrants -->
+                                        <div class="key-value-pair">
+                                            <strong class="key">Registrants:</strong>
+                                            <span class="values">{{ tournament.get_registration_count() }}</span>
+                                        </div>
+
+                                        <!-- Names of registrants -->
+                                        <div class="key-value-pair">
+                                            <strong class="key">Registered Users:</strong>
+                                            <span class="values">{{ tournament.get_registered_user_names() }}</span>
+                                        </div>
+
                                     </div>
                                 </div>
                             </div>
 
+                            <!-- CARD FOOTER -->
                             <footer class="card-footer">
                                 <a href="{{ url_for('tournaments.detail', id=tournament.id) }}" class="card-footer-item">View Details</a>
                                 {% if current_user.is_authenticated and tournament.is_registration_open() %}
