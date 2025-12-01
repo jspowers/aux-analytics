@@ -69,68 +69,79 @@ class TournamentService:
     @staticmethod
     def seed_songs(tournament):
         """
-        Seed songs for bracket based on popularity, then submission order.
+        Seed songs for bracket based on popularity (LOWER = better).
+        Assigns seed_number to each song for permanent storage.
 
         Args:
             tournament: Tournament object
 
         Returns:
-            list: Seeded Song objects in order (highest seed first)
+            list: Seeded Song objects in order (best seed first)
         """
         songs = tournament.songs.all()
 
-        # Sort by popularity (descending, nulls last), then by created_at (ascending)
-        # Songs with popularity get higher seeds, ties broken by submission order
+        # Normalize popularity: NULL becomes 100 (worst popularity)
+        for song in songs:
+            if song.popularity is None:
+                song.popularity = 100
+
+        # Sort by popularity (ASCENDING - lower number is better), then submission order
+        # Lower popularity number = better seed = more likely to get bye
         seeded_songs = sorted(
             songs,
             key=lambda s: (
-                s.popularity is not None,  # Songs with popularity come first
-                s.popularity if s.popularity is not None else 0,  # Higher popularity = higher seed
-                -s.created_at  # Earlier submission = higher seed (negative for ascending)
-            ),
-            reverse=True
+                s.popularity,  # Lower popularity number = better seed
+                s.created_at   # Earlier submission = tiebreaker (better seed)
+            )
         )
 
+        # Assign seed numbers (1 = best seed, gets bye if available)
+        for idx, song in enumerate(seeded_songs):
+            song.seed_number = idx + 1
+
+        db.session.commit()
         return seeded_songs
 
     @staticmethod
     def generate_matchups(tournament, seeded_songs):
         """
-        Generate all matchups for the tournament bracket.
-
-        Creates matchups for all rounds, handles byes for top seeds in non-power-of-2 brackets,
-        and links matchups via next_matchup_id for progression.
+        Generate ONLY Round 1 matchups for the tournament bracket.
+        Future rounds are built on-demand as rounds are finalized.
 
         Args:
             tournament: Tournament object
-            seeded_songs: List of Song objects in seeded order
+            seeded_songs: List of Song objects in seeded order (best seed first)
 
         Returns:
             dict: {
                 'round_1_matchups': List of Matchup objects for Round 1,
-                'total_matchups': Total number of matchups created,
-                'num_byes': Number of bye matchups (top seeds skip Round 1)
+                'total_matchups': Total number of matchups created (just Round 1),
+                'num_byes': Number of byes (best seeds skip Round 1)
             }
         """
         song_count = len(seeded_songs)
         if song_count < 2:
             return {'round_1_matchups': [], 'total_matchups': 0, 'num_byes': 0}
 
-        # Get rounds (should already exist from generate_rounds)
-        rounds = Round.query.filter_by(tournament_id=tournament.id).order_by(Round.round_number).all()
-        if not rounds:
-            rounds = TournamentService.generate_rounds(tournament)
+        # Get Round 1 (should already exist from generate_rounds)
+        round_1 = Round.query.filter_by(
+            tournament_id=tournament.id,
+            round_number=1
+        ).first()
+
+        if not round_1:
+            raise ValueError("Round 1 does not exist. Call generate_rounds() first.")
 
         # Calculate bracket size (next power of 2)
         bracket_size = 2 ** math.ceil(math.log2(song_count))
         num_byes = bracket_size - song_count
 
         # Round 1: Create matchups for non-bye songs
-        # Top seeds get byes, remaining songs battle in Round 1
+        # Best seeds (lowest seed_numbers) get byes, remaining songs compete in Round 1
         round_1_matchups = []
-        songs_in_round_1 = seeded_songs[num_byes:]  # Skip top N seeds
+        songs_in_round_1 = seeded_songs[num_byes:]  # Skip best N seeds
 
-        # Pair songs: highest remaining seed vs lowest seed
+        # Pair songs: best remaining seed vs worst seed
         num_round_1_matchups = len(songs_in_round_1) // 2
         for i in range(num_round_1_matchups):
             high_seed_song = songs_in_round_1[i]
@@ -138,7 +149,8 @@ class TournamentService:
 
             matchup = Matchup(
                 tournament_id=tournament.id,
-                round_id=rounds[0].id,
+                round_id=round_1.id,
+                position_in_round=i,
                 song1_id=high_seed_song.id,
                 song2_id=low_seed_song.id,
                 status='pending'
@@ -146,145 +158,121 @@ class TournamentService:
             db.session.add(matchup)
             round_1_matchups.append(matchup)
 
-        db.session.flush()  # Get IDs for round 1 matchups
-
-        # Create placeholder matchups for subsequent rounds
-        # We need to link them via next_matchup_id
-        all_matchups_by_round = {1: round_1_matchups}
-
-        for round_idx in range(1, len(rounds)):
-            round_num = round_idx + 1
-            prev_round_matchups = all_matchups_by_round[round_num - 1]
-
-            # Number of matchups in this round = half of previous round matchups + byes advancing
-            if round_num == 2:
-                # Round 2: Include bye songs advancing
-                num_matchups_this_round = (len(prev_round_matchups) + num_byes) // 2
-            else:
-                num_matchups_this_round = len(prev_round_matchups) // 2
-
-            this_round_matchups = []
-            for i in range(num_matchups_this_round):
-                matchup = Matchup(
-                    tournament_id=tournament.id,
-                    round_id=rounds[round_idx].id,
-                    status='pending'
-                )
-                db.session.add(matchup)
-                this_round_matchups.append(matchup)
-
-            db.session.flush()  # Get IDs for this round's matchups
-
-            # Link previous round matchups to this round
-            if round_num == 2:
-                # Special case: Round 1 winners AND bye songs advance to Round 2
-                # First, link bye songs (top seeds) to Round 2 matchups
-                bye_songs = seeded_songs[:num_byes]
-
-                # Pair byes into Round 2 matchups (high seed vs low seed among byes)
-                for i in range(len(bye_songs) // 2):
-                    round_2_matchup = this_round_matchups[i]
-                    round_2_matchup.song1_id = bye_songs[i].id
-                    round_2_matchup.song2_id = bye_songs[-(i + 1)].id
-
-                # Link Round 1 matchups to remaining Round 2 slots
-                offset = len(bye_songs) // 2
-                for i, prev_matchup in enumerate(prev_round_matchups):
-                    next_matchup_idx = offset + i // 2
-                    prev_matchup.next_matchup_id = this_round_matchups[next_matchup_idx].id
-            else:
-                # Normal case: pair previous round matchups into next round
-                for i, prev_matchup in enumerate(prev_round_matchups):
-                    next_matchup_idx = i // 2
-                    prev_matchup.next_matchup_id = this_round_matchups[next_matchup_idx].id
-
-            all_matchups_by_round[round_num] = this_round_matchups
-
         db.session.commit()
-
-        total_matchups = sum(len(matchups) for matchups in all_matchups_by_round.values())
 
         return {
             'round_1_matchups': round_1_matchups,
-            'total_matchups': total_matchups,
+            'total_matchups': len(round_1_matchups),
             'num_byes': num_byes
         }
 
     @staticmethod
-    def advance_round(tournament, current_round):
+    def build_next_round_matchups(tournament, completed_round):
         """
-        Advance winners from current round to next round.
+        Build matchups for the round following the completed round.
+        Uses winners from completed round to populate next round matchups.
 
         Args:
             tournament: Tournament object
-            current_round: Round object to advance from
+            completed_round: Round object that was just completed
 
         Returns:
-            dict: Information about advancement
+            list: Created Matchup objects, or None if tournament is complete
         """
-        import time
-
-        # Mark current round as completed
-        current_round.status = 'completed'
-        current_round.end_date = int(time.time())  # Set actual end time
-
-        # Get all matchups from current round
-        matchups = Matchup.query.filter_by(round_id=current_round.id).all()
-
-        # Determine winners and advance them
-        winners_advanced = 0
-        for matchup in matchups:
-            winner = matchup.get_winner()
-            if winner:
-                # Set the winner in the matchup
-                matchup.winner_song_id = winner.id
-                matchup.status = 'completed'
-
-                # Advance winner to next matchup if it exists
-                if matchup.next_matchup_id:
-                    next_matchup = Matchup.query.get(matchup.next_matchup_id)
-                    if next_matchup:
-                        # Place winner in next matchup
-                        if not next_matchup.song1_id:
-                            next_matchup.song1_id = winner.id
-                            winners_advanced += 1
-                        elif not next_matchup.song2_id:
-                            next_matchup.song2_id = winner.id
-                            winners_advanced += 1
-
-        # Check if there's a next round
+        # Get next round
         next_round = Round.query.filter_by(
             tournament_id=tournament.id,
-            round_number=current_round.round_number + 1
+            round_number=completed_round.round_number + 1
         ).first()
 
-        if next_round:
-            # Activate next round
-            next_round.status = 'active'
-            next_round.start_date = int(time.time())
+        if not next_round:
+            return None  # Tournament complete
 
-            # Update tournament status
-            tournament.status = f'voting_round_{next_round.round_number}'
+        # Get winners from completed round
+        completed_matchups = Matchup.query.filter_by(
+            round_id=completed_round.id
+        ).order_by(Matchup.position_in_round).all()
 
-            db.session.commit()
+        winners = []
+        for matchup in completed_matchups:
+            winner = matchup.get_winner()
+            if winner:
+                winners.append(winner)
 
-            return {
-                'winners_advanced': winners_advanced,
-                'next_round': next_round.name,
-                'tournament_completed': False
-            }
-        else:
-            # Tournament is complete
-            tournament.status = 'completed'
-            db.session.commit()
+        # Special case: Round 1 → Round 2 (handle byes)
+        if completed_round.round_number == 1:
+            # Get bye songs by seed_number (best seeds got byes)
+            num_songs = tournament.songs.count()
+            bracket_size = 2 ** math.ceil(math.log2(num_songs))
+            num_byes = bracket_size - num_songs
 
-            # Get the final winner
-            final_matchup = matchups[0] if matchups else None
-            final_winner = final_matchup.get_winner() if final_matchup else None
+            bye_songs = Song.query.filter_by(tournament_id=tournament.id).filter(
+                Song.seed_number <= num_byes
+            ).order_by(Song.seed_number).all()
 
-            return {
-                'winners_advanced': 0,
-                'next_round': None,
-                'tournament_completed': True,
-                'final_winner': final_winner
-            }
+            return TournamentService._build_round_2_with_byes(
+                tournament, next_round, winners, bye_songs
+            )
+
+        # Normal case: pair winners by seed
+        matchups_created = []
+        sorted_winners = sorted(winners, key=lambda s: s.seed_number)
+
+        for i in range(0, len(sorted_winners), 2):
+            if i + 1 < len(sorted_winners):
+                matchup = Matchup(
+                    tournament_id=tournament.id,
+                    round_id=next_round.id,
+                    position_in_round=i // 2,
+                    song1_id=sorted_winners[i].id,
+                    song2_id=sorted_winners[i + 1].id,
+                    status='pending'
+                )
+                db.session.add(matchup)
+                matchups_created.append(matchup)
+
+        db.session.commit()
+        return matchups_created
+
+    @staticmethod
+    def _build_round_2_with_byes(tournament, next_round, round_1_winners, bye_songs):
+        """
+        Build Round 2 matchups with bye songs and Round 1 winners.
+        Pairs best seeds with worst seeds for balanced matchups.
+
+        Args:
+            tournament: Tournament object
+            next_round: Round 2 object
+            round_1_winners: List of Song objects that won Round 1
+            bye_songs: List of Song objects that got byes
+
+        Returns:
+            list: Created Matchup objects
+        """
+        matchups_created = []
+
+        # Sort both lists by seed_number (ascending - best seed first)
+        sorted_byes = sorted(bye_songs, key=lambda s: s.seed_number)
+        sorted_winners = sorted(round_1_winners, key=lambda s: s.seed_number)
+
+        # Combine: byes first (they have better seeds), then winners
+        all_advancing = sorted_byes + sorted_winners
+
+        # Pair: best vs worst, 2nd best vs 2nd worst, etc.
+        for i in range(len(all_advancing) // 2):
+            high_seed = all_advancing[i]
+            low_seed = all_advancing[-(i + 1)]
+
+            matchup = Matchup(
+                tournament_id=tournament.id,
+                round_id=next_round.id,
+                position_in_round=i,
+                song1_id=high_seed.id,
+                song2_id=low_seed.id,
+                status='pending'
+            )
+            db.session.add(matchup)
+            matchups_created.append(matchup)
+
+        db.session.commit()
+        return matchups_created

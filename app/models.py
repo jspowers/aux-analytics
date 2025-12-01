@@ -255,6 +255,7 @@ class Song(db.Model):
     submission_method = db.Column(db.String(20), nullable=False)  # manual, spotify, youtube
     submitted_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
+    seed_number = db.Column(db.Integer)  # Bracket seed (1=best, populated during bracket build)
     created_at = db.Column(db.Integer, default=lambda: int(time.time()), nullable=False)
 
     # Unique constraint to prevent exact duplicates per user per tournament

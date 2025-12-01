@@ -66,17 +66,15 @@
                         <h4 class="title is-6">Round Management (Owner Only)</h4>
                         <div class="buttons">
                             {% if round_data.is_active %}
-                                <!-- End Round Early -->
-                                <form method="POST" action="{{ url_for('tournaments.end_round_early', tournament_id=tournament.id, round_id=round_data.round.id) }}" style="display: inline;">
+                                <!-- Finalize Active Round -->
+                                <form method="POST" action="{{ url_for('tournaments.finalize_round', tournament_id=tournament.id, round_id=round_data.round.id) }}" style="display: inline;">
                                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                    <button type="submit" class="button is-warning" onclick="return confirm('Are you sure you want to end this round early and advance winners?')">
-                                        End Round Early
+                                    <button type="submit" class="button is-warning" onclick="return confirm('Finalize this round? This will close voting, determine winners, and start the next round.')">
+                                        Finalize Round
                                     </button>
                                 </form>
-                            {% endif %}
 
-                            {% if round_data.round.status in ['active', 'pending'] %}
-                                <!-- Extend Round -->
+                                <!-- Extend Active Round -->
                                 <div class="field has-addons">
                                     <form method="POST" action="{{ url_for('tournaments.extend_round', tournament_id=tournament.id, round_id=round_data.round.id) }}" style="display: inline-flex;">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
@@ -85,17 +83,24 @@
                                         </div>
                                         <div class="control">
                                             <button type="submit" class="button is-info">
-                                                Extend Round
+                                                Extend Deadline
                                             </button>
                                         </div>
                                     </form>
                                 </div>
+
+                            {% elif round_data.round.status == 'completed' %}
+                                <span class="tag is-light is-medium">Round Completed</span>
                             {% endif %}
                         </div>
                     </div>
                 {% endif %}
 
-                {% if round_data.matchups %}
+                {% if round_data.get('not_built_yet') %}
+                    <div class="notification is-light">
+                        This round will be built when the previous round is finalized.
+                    </div>
+                {% elif round_data.matchups %}
                     <div class="columns is-multiline">
                         {% for matchup in round_data.matchups %}
                         <div class="column is-half">

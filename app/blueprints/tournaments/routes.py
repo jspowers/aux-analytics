@@ -3,7 +3,7 @@ from flask import render_template, redirect, url_for, flash, current_app, reques
 from flask_login import login_required, current_user
 from app.blueprints.tournaments import tournaments_bp
 from app.blueprints.tournaments.forms import SongSubmissionForm, TournamentCreationForm
-from app.models import Tournament, Song, Registration, Round
+from app.models import Tournament, Song, Registration, Round, Matchup
 from app.extensions import db
 from app.services.tournament_service import TournamentService
 from datetime import datetime, timedelta
@@ -230,16 +230,16 @@ def delete_song(tournament_id, song_id):
     return redirect(url_for('tournaments.my_submissions', id=tournament_id))
 
 
-@tournaments_bp.route('/<int:tournament_id>/round/<int:round_id>/end-early', methods=['POST'])
+@tournaments_bp.route('/<int:tournament_id>/round/<int:round_id>/finalize', methods=['POST'])
 @login_required
-def end_round_early(tournament_id, round_id):
-    """End a round early and advance to the next round"""
+def finalize_round(tournament_id, round_id):
+    """Finalize current round and build next round matchups"""
     tournament = Tournament.query.get_or_404(tournament_id)
     round_obj = Round.query.get_or_404(round_id)
 
-    # Authorization: Only tournament creator can manage rounds
+    # Authorization: Only tournament creator can finalize rounds
     if tournament.created_by_user_id != current_user.id:
-        flash('Only the tournament creator can manage rounds', 'danger')
+        flash('Only the tournament creator can finalize rounds', 'danger')
         return redirect(url_for('voting.bracket', tournament_id=tournament_id))
 
     # Verify round belongs to this tournament
@@ -247,20 +247,59 @@ def end_round_early(tournament_id, round_id):
         flash('Invalid round for this tournament', 'danger')
         return redirect(url_for('voting.bracket', tournament_id=tournament_id))
 
-    # Can only end active rounds early
+    # Can only finalize active rounds
     if round_obj.status != 'active':
-        flash('Can only end active rounds early', 'warning')
+        flash('Can only finalize active rounds', 'warning')
         return redirect(url_for('voting.bracket', tournament_id=tournament_id))
 
     try:
-        # Advance the round
-        from app.services.tournament_service import TournamentService
-        TournamentService.advance_round(tournament, round_obj)
+        import time
 
-        flash(f'{round_obj.name} has been ended early and winners have advanced!', 'success')
+        # Mark round completed
+        round_obj.status = 'completed'
+        round_obj.end_date = int(time.time())
+
+        # Mark all matchups completed and record winners
+        matchups = Matchup.query.filter_by(round_id=round_obj.id).all()
+        for matchup in matchups:
+            winner = matchup.get_winner()
+            if winner:
+                matchup.winner_song_id = winner.id
+            matchup.status = 'completed'
+
+        # Build next round matchups
+        from app.services.tournament_service import TournamentService
+        next_matchups = TournamentService.build_next_round_matchups(
+            tournament, round_obj
+        )
+
+        if next_matchups is None:
+            # Tournament complete
+            tournament.status = 'completed'
+            db.session.commit()
+
+            # Get final winner
+            final_winner = matchups[0].get_winner() if matchups else None
+            winner_title = final_winner.title if final_winner else "Unknown"
+            flash(f'Tournament completed! Winner: {winner_title}', 'success')
+        else:
+            # Auto-activate next round
+            next_round = Round.query.filter_by(
+                tournament_id=tournament_id,
+                round_number=round_obj.round_number + 1
+            ).first()
+
+            next_round.status = 'active'
+            next_round.start_date = int(time.time())
+            next_round.end_date = int(time.time() + (72 * 3600))  # 72 hours default
+            tournament.status = f'voting_round_{next_round.round_number}'
+
+            db.session.commit()
+            flash(f'{round_obj.name} finalized! {next_round.name} is now active.', 'success')
+
     except Exception as e:
         db.session.rollback()
-        flash(f'Error ending round: {str(e)}', 'danger')
+        flash(f'Error finalizing round: {str(e)}', 'danger')
 
     return redirect(url_for('voting.bracket', tournament_id=tournament_id))
 

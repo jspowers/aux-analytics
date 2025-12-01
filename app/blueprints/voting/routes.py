@@ -32,6 +32,18 @@ def bracket():
     for round_obj in rounds:
         matchups = Matchup.query.filter_by(round_id=round_obj.id).order_by(Matchup.position_in_round).all()
 
+        # Check if round has been built yet
+        if not matchups and round_obj.status == 'pending':
+            # Round hasn't been built yet (matchups will be created when previous round is finalized)
+            rounds_data.append({
+                'round': round_obj,
+                'matchups': [],
+                'is_active': False,
+                'is_voting_open': False,
+                'not_built_yet': True
+            })
+            continue
+
         # Prepare matchup data with vote information
         matchups_data = []
         for matchup in matchups:
