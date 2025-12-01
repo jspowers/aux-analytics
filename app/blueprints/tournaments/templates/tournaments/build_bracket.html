@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Build Bracket - {{ tournament.name }} - Auxiliary Analytics
+{% endblock %}
+
+{% block content %}
+<section class="section is-small">
+    <div class="container">
+        <div class="card">
+            <header class="card-header">
+                <p class="card-header-title">
+                    Build Bracket - {{ tournament.name }}
+                </p>
+            </header>
+
+            <div class="card-content">
+                <div class="notification is-info is-light mb-5">
+                    <strong>Preview Round 1 Matchups</strong>
+                    <br><small>Review the bracket below and set the voting deadline to confirm.</small>
+                </div>
+
+                <!-- Bracket Summary -->
+                <div class="box mb-4">
+                    <h3 class="title is-5 mb-3">Bracket Summary</h3>
+                    <div class="key-value-pair">
+                        <span class="key">Total Songs:</span>
+                        <span class="values">{{ song_count }}</span>
+                    </div>
+                    <div class="key-value-pair">
+                        <span class="key">Total Rounds:</span>
+                        <span class="values">{{ rounds|length }}</span>
+                    </div>
+                    <div class="key-value-pair">
+                        <span class="key">Byes (Top Seeds):</span>
+                        <span class="values">{{ num_byes }}</span>
+                    </div>
+                    <div class="key-value-pair">
+                        <span class="key">Round 1 Matchups:</span>
+                        <span class="values">{{ preview_matchups|length }}</span>
+                    </div>
+                </div>
+
+                <!-- Bye Information -->
+                {% if bye_info %}
+                <div class="box mb-4">
+                    <h3 class="title is-5 mb-3">Top Seeds (Byes - Skip Round 1)</h3>
+                    <p class="mb-3"><small>These songs automatically advance to Round 2</small></p>
+                    {% for bye in bye_info %}
+                        <div class="notification is-success is-light mb-2">
+                            <div class="key-value-pair">
+                                <span class="key">Seed #{{ bye.seed }}:</span>
+                                <span class="values">
+                                    <strong>{{ bye.song.title }}</strong> by {{ bye.song.artist }}
+                                    {% if bye.song.popularity %}
+                                        <span class="tag is-info is-light ml-2">Popularity: {{ bye.song.popularity }}</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Round 1 Matchups -->
+                <div class="box mb-5">
+                    <h3 class="title is-5 mb-3">Round 1 Matchups</h3>
+                    {% if preview_matchups %}
+                        {% for matchup in preview_matchups %}
+                            <div class="box has-background-light mb-3">
+                                <p class="has-text-weight-bold mb-2">Matchup {{ loop.index }}</p>
+
+                                <!-- Song 1 -->
+                                <div class="mb-2 pb-2" style="border-bottom: 1px solid #dbdbdb;">
+                                    <div class="key-value-pair">
+                                        <span class="key">Seed #{{ matchup.seed1 }}:</span>
+                                        <span class="values">
+                                            <strong>{{ matchup.song1.title }}</strong> by {{ matchup.song1.artist }}
+                                        </span>
+                                    </div>
+                                    {% if matchup.song1.popularity %}
+                                        <div class="key-value-pair">
+                                            <span class="key">Popularity:</span>
+                                            <span class="values">
+                                                <span class="tag is-info">{{ matchup.song1.popularity }}</span>
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- VS Divider -->
+                                <p class="has-text-centered has-text-weight-bold mb-2">VS</p>
+
+                                <!-- Song 2 -->
+                                <div class="pt-2">
+                                    <div class="key-value-pair">
+                                        <span class="key">Seed #{{ matchup.seed2 }}:</span>
+                                        <span class="values">
+                                            <strong>{{ matchup.song2.title }}</strong> by {{ matchup.song2.artist }}
+                                        </span>
+                                    </div>
+                                    {% if matchup.song2.popularity %}
+                                        <div class="key-value-pair">
+                                            <span class="key">Popularity:</span>
+                                            <span class="values">
+                                                <span class="tag is-info">{{ matchup.song2.popularity }}</span>
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="notification is-warning is-light">
+                            No matchups for Round 1 (all songs have byes).
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Confirmation Form -->
+                <form method="POST" action="{{ url_for('tournaments.build_bracket', id=tournament.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                    <div class="field">
+                        <label class="label">Round 1 Voting Deadline</label>
+                        <div class="control">
+                            <div class="select">
+                                <select name="deadline_hours">
+                                    <option value="24">24 hours</option>
+                                    <option value="48">48 hours</option>
+                                    <option value="72" selected>72 hours (3 days)</option>
+                                    <option value="96">96 hours (4 days)</option>
+                                    <option value="120">120 hours (5 days)</option>
+                                    <option value="168">168 hours (7 days)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <p class="help">Choose how long users have to vote in Round 1</p>
+                    </div>
+
+                    <div class="notification is-warning is-light mb-4">
+                        <strong>Warning:</strong> Once confirmed, the bracket cannot be changed. The tournament status will change to "Voting Round 1" and voting will begin immediately.
+                    </div>
+
+                    <div class="buttons">
+                        <a href="{{ url_for('tournaments.detail', id=tournament.id) }}" class="button is-light">
+                            Cancel
+                        </a>
+                        <button type="submit" class="button is-primary">
+                            Confirm & Start Voting
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

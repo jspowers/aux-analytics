@@ -8,6 +8,8 @@
 
 ## Flask Best Practices
 - Use Flask-SQLAlchemy for database operations
+- If model updates are required, ask before doing any operation that will reset/delete the database and EXPLICITLY WARN THE USER.
+- If model updates are required, ask before doing any operation that will reset/delete the database and EXPLICITLY WARN THE USER.
 - Use Flask's config object for configuration values
 - Use environment variables for secrets (python-dotenv)
 - Implement basic error handling (at least custom 404/500 pages)

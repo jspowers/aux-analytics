@@ -33,7 +33,6 @@
                 {% if current_user.is_authenticated %}
                     <a class="navbar-item" href="{{ url_for('tournaments.create') }}">Create Tournament</a>
                 {% endif %}
-                <a class="navbar-item" href="{{ url_for('voting.bracket') }}">Bracket</a>
             </div>
             <div class="navbar-end">
                 {% if current_user.is_authenticated %}

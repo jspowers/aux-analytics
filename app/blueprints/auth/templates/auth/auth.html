@@ -155,7 +155,7 @@
                             </div>
                             <div class="key-value-pair">
                                 <span class="key">Member Since:</span>
-                                <span class="values">{{ user.created_at.strftime('%B %d, %Y') }}</span>
+                                <span class="values">{{ user.created_at|strftime('%B %d, %Y') }}</span>
                             </div>
                         </div>
 
@@ -190,7 +190,7 @@
                                         </div>
                                         <div class="key-value-pair">
                                             <span class="key">Submitted:</span>
-                                            <span class="values">{{ song.created_at.strftime('%B %d, %Y') }}</span>
+                                            <span class="values">{{ song.created_at|strftime('%B %d, %Y') }}</span>
                                         </div>
                                     </div>
                                 {% endfor %}

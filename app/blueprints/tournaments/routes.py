@@ -1,10 +1,12 @@
 """Tournament routes"""
-from flask import render_template, redirect, url_for, flash, current_app
+from flask import render_template, redirect, url_for, flash, current_app, request
 from flask_login import login_required, current_user
 from app.blueprints.tournaments import tournaments_bp
 from app.blueprints.tournaments.forms import SongSubmissionForm, TournamentCreationForm
-from app.models import Tournament, Song, Registration
+from app.models import Tournament, Song, Registration, Round
 from app.extensions import db
+from app.services.tournament_service import TournamentService
+from datetime import datetime, timedelta
 
 
 @tournaments_bp.route('/')
@@ -80,6 +82,7 @@ def create():
     return render_template('tournaments/create.html', form=form)
 
 @tournaments_bp.route('/<int:id>')
+@login_required
 def detail(id):
     """Tournament detail page"""
     tournament = Tournament.query.get_or_404(id)
@@ -225,3 +228,201 @@ def delete_song(tournament_id, song_id):
 
     flash(f'Successfully deleted "{song_title}"', 'success')
     return redirect(url_for('tournaments.my_submissions', id=tournament_id))
+
+
+@tournaments_bp.route('/<int:tournament_id>/round/<int:round_id>/end-early', methods=['POST'])
+@login_required
+def end_round_early(tournament_id, round_id):
+    """End a round early and advance to the next round"""
+    tournament = Tournament.query.get_or_404(tournament_id)
+    round_obj = Round.query.get_or_404(round_id)
+
+    # Authorization: Only tournament creator can manage rounds
+    if tournament.created_by_user_id != current_user.id:
+        flash('Only the tournament creator can manage rounds', 'danger')
+        return redirect(url_for('voting.bracket', tournament_id=tournament_id))
+
+    # Verify round belongs to this tournament
+    if round_obj.tournament_id != tournament_id:
+        flash('Invalid round for this tournament', 'danger')
+        return redirect(url_for('voting.bracket', tournament_id=tournament_id))
+
+    # Can only end active rounds early
+    if round_obj.status != 'active':
+        flash('Can only end active rounds early', 'warning')
+        return redirect(url_for('voting.bracket', tournament_id=tournament_id))
+
+    try:
+        # Advance the round
+        from app.services.tournament_service import TournamentService
+        TournamentService.advance_round(tournament, round_obj)
+
+        flash(f'{round_obj.name} has been ended early and winners have advanced!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error ending round: {str(e)}', 'danger')
+
+    return redirect(url_for('voting.bracket', tournament_id=tournament_id))
+
+
+@tournaments_bp.route('/<int:tournament_id>/round/<int:round_id>/extend', methods=['POST'])
+@login_required
+def extend_round(tournament_id, round_id):
+    """Extend a round's deadline"""
+    tournament = Tournament.query.get_or_404(tournament_id)
+    round_obj = Round.query.get_or_404(round_id)
+
+    # Authorization: Only tournament creator can manage rounds
+    if tournament.created_by_user_id != current_user.id:
+        flash('Only the tournament creator can manage rounds', 'danger')
+        return redirect(url_for('voting.bracket', tournament_id=tournament_id))
+
+    # Verify round belongs to this tournament
+    if round_obj.tournament_id != tournament_id:
+        flash('Invalid round for this tournament', 'danger')
+        return redirect(url_for('voting.bracket', tournament_id=tournament_id))
+
+    # Can only extend active or pending rounds
+    if round_obj.status not in ['active', 'pending']:
+        flash('Can only extend active or pending rounds', 'warning')
+        return redirect(url_for('voting.bracket', tournament_id=tournament_id))
+
+    try:
+        # Get extension hours from form (default 24 hours)
+        extension_hours = int(request.form.get('extension_hours', 24))
+
+        # Extend this round
+        if round_obj.end_date:
+            new_end_date = datetime.fromtimestamp(round_obj.end_date) + timedelta(hours=extension_hours)
+            round_obj.end_date = int(new_end_date.timestamp())
+        else:
+            # If no end date set, extend from now
+            new_end_date = datetime.now() + timedelta(hours=extension_hours)
+            round_obj.end_date = int(new_end_date.timestamp())
+
+        # Cascade delay to all following rounds
+        rounds = Round.query.filter_by(tournament_id=tournament_id).order_by(Round.round_number).all()
+        for r in rounds:
+            if r.round_number > round_obj.round_number:
+                # Shift start and end dates by extension_hours
+                if r.start_date:
+                    r.start_date = int(datetime.fromtimestamp(r.start_date).timestamp()) + (extension_hours * 3600)
+                if r.end_date:
+                    r.end_date = int(datetime.fromtimestamp(r.end_date).timestamp()) + (extension_hours * 3600)
+
+        db.session.commit()
+        flash(f'{round_obj.name} has been extended by {extension_hours} hours. All following rounds have been delayed accordingly.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error extending round: {str(e)}', 'danger')
+
+    return redirect(url_for('voting.bracket', tournament_id=tournament_id))
+
+
+@tournaments_bp.route('/<int:id>/build-bracket', methods=['GET', 'POST'])
+@login_required
+def build_bracket(id):
+    """Preview and confirm bracket generation for a tournament"""
+    tournament = Tournament.query.get_or_404(id)
+
+    # Authorization: Only tournament creator can build bracket
+    if tournament.created_by_user_id != current_user.id:
+        flash('Only the tournament creator can build the bracket', 'danger')
+        return redirect(url_for('tournaments.detail', id=id))
+
+    # Validation: Tournament must be in registration status
+    if tournament.status != 'registration':
+        flash('Bracket can only be built from registration status', 'danger')
+        return redirect(url_for('tournaments.detail', id=id))
+
+    # Validation: Must have at least 2 songs
+    song_count = tournament.songs.count()
+    if song_count < 2:
+        flash('Cannot build bracket with fewer than 2 songs', 'danger')
+        return redirect(url_for('tournaments.detail', id=id))
+
+    # GET: Generate preview of matchups
+    if request.method == 'GET':
+        # Seed songs
+        seeded_songs = TournamentService.seed_songs(tournament)
+
+        # Generate rounds if they don't exist yet
+        existing_rounds = Round.query.filter_by(tournament_id=tournament.id).count()
+        if existing_rounds == 0:
+            TournamentService.generate_rounds(tournament)
+
+        # Create a preview data structure without DB operations
+        import math
+        bracket_size = 2 ** math.ceil(math.log2(song_count))
+        num_byes = bracket_size - song_count
+
+        # Preview matchups for Round 1
+        songs_in_round_1 = seeded_songs[num_byes:]
+        preview_matchups = []
+
+        for i in range(len(songs_in_round_1) // 2):
+            high_seed = songs_in_round_1[i]
+            low_seed = songs_in_round_1[-(i + 1)]
+            preview_matchups.append({
+                'song1': high_seed,
+                'song2': low_seed,
+                'seed1': num_byes + i + 1,
+                'seed2': song_count - i
+            })
+
+        # Preview bye information
+        bye_songs = seeded_songs[:num_byes] if num_byes > 0 else []
+        bye_info = [{'song': song, 'seed': idx + 1} for idx, song in enumerate(bye_songs)]
+
+        # Get round info
+        rounds = Round.query.filter_by(tournament_id=tournament.id).order_by(Round.round_number).all()
+
+        return render_template('tournaments/build_bracket.html',
+                             tournament=tournament,
+                             preview_matchups=preview_matchups,
+                             bye_info=bye_info,
+                             num_byes=num_byes,
+                             song_count=song_count,
+                             rounds=rounds)
+
+    # POST: Confirm and create the bracket
+    if request.method == 'POST':
+        try:
+            # Get deadline from form (default 72 hours per round)
+            deadline_hours = int(request.form.get('deadline_hours', 72))
+
+            # Seed songs
+            seeded_songs = TournamentService.seed_songs(tournament)
+
+            # Generate matchups (this commits to DB)
+            result = TournamentService.generate_matchups(tournament, seeded_songs)
+
+            # Set deadlines for all rounds
+            rounds = Round.query.filter_by(tournament_id=tournament.id).order_by(Round.round_number).all()
+            current_time = datetime.now()
+
+            for idx, round_obj in enumerate(rounds):
+                if idx == 0:
+                    # Round 1 starts immediately
+                    round_obj.start_date = int(current_time.timestamp())
+                    round_obj.end_date = int((current_time + timedelta(hours=deadline_hours)).timestamp())
+                    round_obj.status = 'active'
+                else:
+                    # Subsequent rounds start after previous round ends
+                    prev_round = rounds[idx - 1]
+                    round_obj.start_date = prev_round.end_date
+                    round_obj.end_date = int((datetime.fromtimestamp(prev_round.end_date) + timedelta(hours=deadline_hours)).timestamp())
+                    round_obj.status = 'pending'
+
+            # Update tournament status to voting_round_1
+            tournament.status = 'voting_round_1'
+
+            db.session.commit()
+
+            flash(f'Bracket created successfully! {result["total_matchups"]} matchups generated with {result["num_byes"]} bye(s). Round 1 voting is now open!', 'success')
+            return redirect(url_for('tournaments.detail', id=id))
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error building bracket: {str(e)}', 'danger')
+            return redirect(url_for('tournaments.detail', id=id))

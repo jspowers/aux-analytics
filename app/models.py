@@ -59,6 +59,7 @@ class Tournament(db.Model):
     registrations = db.relationship('Registration', backref='tournament', lazy='selectin', cascade='all, delete-orphan')
     rounds = db.relationship('Round', backref='tournament', lazy='dynamic', order_by='Round.round_number', cascade='all, delete-orphan')
     creator = db.relationship('User', backref='created_tournaments', foreign_keys=[created_by_user_id])
+    matchups = db.relationship('Matchup', backref='tournament', lazy='dynamic', cascade='all, delete-orphan')
 
     def is_registration_open(self):
         """Check if song submissions are allowed"""
@@ -124,6 +125,35 @@ class Tournament(db.Model):
         current_count = self.get_user_submission_count(user_id)
         remaining = self.max_submissions_per_user - current_count
         return max(0, remaining)
+
+    def get_current_round_number(self):
+        """Get the current active round number based on tournament status"""
+        if self.status == 'registration' or self.status == 'completed':
+            return None
+
+        # Status format: voting_round_1, voting_round_2, etc.
+        if self.status.startswith('voting_round_'):
+            try:
+                return int(self.status.split('_')[-1])
+            except (ValueError, IndexError):
+                return None
+
+        return None
+
+    def is_voting_phase(self):
+        """Check if tournament is in a voting phase"""
+        return self.status.startswith('voting_round_')
+
+    def get_current_round(self):
+        """Get the current active Round object"""
+        round_number = self.get_current_round_number()
+        if round_number is None:
+            return None
+
+        return Round.query.filter_by(
+            tournament_id=self.id,
+            round_number=round_number
+        ).first()
 
     @staticmethod
     def generate_unique_code():
@@ -262,8 +292,9 @@ class Matchup(db.Model):
     __tablename__ = 'matchups'
 
     id = db.Column(db.Integer, primary_key=True)
+    tournament_id = db.Column(db.Integer, db.ForeignKey('tournaments.id'), nullable=False)
     round_id = db.Column(db.Integer, db.ForeignKey('rounds.id'), nullable=False)
-    position_in_round = db.Column(db.Integer, nullable=False)  # For bracket placement
+    position_in_round = db.Column(db.Integer)  # For bracket placement
     song1_id = db.Column(db.Integer, db.ForeignKey('songs.id'))  # Nullable for TBD matchups
     song2_id = db.Column(db.Integer, db.ForeignKey('songs.id'))  # Nullable for TBD matchups
     winner_song_id = db.Column(db.Integer, db.ForeignKey('songs.id'))  # Nullable until voting completes
@@ -309,6 +340,8 @@ class Vote(db.Model):
     matchup_id = db.Column(db.Integer, db.ForeignKey('matchups.id'), nullable=False)
     song_id = db.Column(db.Integer, db.ForeignKey('songs.id'), nullable=False)  # The song voted for
     voted_at = db.Column(db.Integer, default=lambda: int(time.time()), nullable=False)
+    updated_at = db.Column(db.Integer, default=lambda: int(time.time()), onupdate=lambda: int(time.time()), nullable=False)
+    is_vote_changed = db.Column(db.Boolean, default=False, nullable=False)
 
     # Unique constraint to prevent duplicate votes
     __table_args__ = (

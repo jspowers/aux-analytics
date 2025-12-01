@@ -24,8 +24,12 @@
                     <div class="key-value-pair">
                         <span class="key">Status:</span>
                         <span class="values">
-                            <span class="tag {% if tournament.status == 'active' %}is-success{% elif tournament.status == 'pending' %}is-warning{% else %}is-light{% endif %}">
-                                {{ tournament.status|capitalize }}
+                            <span class="tag {% if tournament.is_voting_phase() %}is-success{% elif tournament.status == 'registration' %}is-warning{% elif tournament.status == 'completed' %}is-light{% else %}is-info{% endif %}">
+                                {% if tournament.is_voting_phase() %}
+                                    Voting Round {{ tournament.get_current_round_number() }}
+                                {% else %}
+                                    {{ tournament.status|capitalize }}
+                                {% endif %}
                             </span>
                         </span>
                     </div>
@@ -113,9 +117,27 @@
                         </a>
                     {% endif %}
 
-                    <a href="{{ url_for('voting.bracket') }}" class="button is-info">
-                        View Bracket
-                    </a>
+                    {% if current_user.is_authenticated and tournament.created_by_user_id == current_user.id and tournament.status == 'registration' %}
+                        {% if tournament.songs.count() >= 2 %}
+                            <a href="{{ url_for('tournaments.build_bracket', id=tournament.id) }}" class="button is-success">
+                                Build Bracket
+                            </a>
+                        {% else %}
+                            <button class="button is-success" disabled title="Need at least 2 songs to build bracket">
+                                Build Bracket (Need 2+ Songs)
+                            </button>
+                        {% endif %}
+                    {% elif current_user.is_authenticated and tournament.created_by_user_id != current_user.id and tournament.status == 'registration' %}
+                        <button class="button is-success" disabled title="Only the tournament creator can build the bracket">
+                            Build Bracket (Creator Only)
+                        </button>
+                    {% endif %}
+
+                    {% if tournament.is_voting_phase() or tournament.status == 'completed' %}
+                        <a href="{{ url_for('voting.bracket', tournament_id=tournament.id) }}" class="button is-info">
+                            View Bracket
+                        </a>
+                    {% endif %}
                 </div>
 
                 <hr>

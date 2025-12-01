@@ -33,7 +33,7 @@ def register():
 def login():
     """User login"""
     if current_user.is_authenticated:
-        return redirect(url_for('main.index'))
+        return redirect(url_for('tournaments.list'))
 
     form = LoginForm()
     if form.validate_on_submit():

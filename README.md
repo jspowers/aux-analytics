@@ -63,7 +63,15 @@ These guidelines are tailored for personal projects - keeping best practices whi
   - Submit button automatically disables when limit is reached with clear messaging
 - User can view their own submissions per tournament
 - Registration deadline enforcement
-- Round auto-generation based on song count (infrastructure ready)
+- Bracket building (creator only):
+  - "Build Bracket" button on tournament detail page (visible to creator only during registration)
+  - Intelligent seeding based on Spotify popularity, falling back to submission order
+  - Automatic bye handling for top seeds in non-power-of-2 brackets
+  - 3-step workflow: preview matchups → set round deadline → confirm
+  - Tournament status changes to "Voting Round 1" upon confirmation
+  - Non-creators see disabled button with tooltip explaining creator-only access
+  - Minimum 2 songs validation
+- Round auto-generation based on song count
 
 **Database:**
 - SQLite database with SQLAlchemy ORM
@@ -78,11 +86,30 @@ These guidelines are tailored for personal projects - keeping best practices whi
 - Unified auth template for login/register/account
 - Flash message notifications
 
+**Voting & Bracket:**
+- Interactive bracket view with Bulma tabs for each round
+- Vote submission with real-time UI updates
+- Vote change tracking (users can change votes until round deadline)
+- Round status indicators (Live, Completed)
+- Matchup display logic:
+  - Active rounds: Show songs with vote counts and voting interface
+  - Immediate next round: Show "Winner of (X vs Y)" format
+  - Future rounds: Show "TBD" placeholder
+- Visual feedback for selected votes
+- Voting deadline enforcement per round
+- Vote count display per song
+- Spotify and YouTube links embedded in matchup cards
+
+**Round Management (Tournament Owner):**
+- Automatic round scheduling: Each round has start and end dates set during bracket creation
+- End round early: Manually close voting and advance winners to next round
+- Extend round deadline: Add hours to current round (cascades to all following rounds)
+- Automatic round progression: Winners automatically advance to next matchups
+- Tournament completion detection: Automatically marks tournament as complete after final round
+- Round deadlines apply to all rounds within the tournament
+- Deadline enforcement: Voting disabled after round end_date
+
 **Coming Next:**
-- Bracket seeding and matchup generation
-- Voting functionality
-- Round progression logic
-- Tournament administration and status management
 - AWS deployment updates
 
 ## Getting Started

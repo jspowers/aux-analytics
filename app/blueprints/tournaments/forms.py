@@ -11,11 +11,11 @@ class SongSubmissionForm(FlaskForm):
     """Song submission form for tournaments"""
     submission_method = RadioField('How would you like to submit?',
         choices=[
-            ('manual', 'Enter song details manually'),
             ('spotify', 'Paste Spotify URL'),
-            ('youtube', 'Paste YouTube URL')
+            # ('manual', 'Enter song details manually'),
+            # ('youtube', 'Paste YouTube URL'),
         ],
-        default='manual',
+        default='spotify',
         validators=[DataRequired()])
 
     # Manual entry fields
@@ -36,13 +36,13 @@ class SongSubmissionForm(FlaskForm):
 
         method = self.submission_method.data
 
-        if method == 'manual':
-            if not self.title.data or not self.artist.data:
-                self.title.errors.append('Title and Artist are required for manual entry')
-                return False
-        elif method == 'spotify':
+        if method == 'spotify':
             if not self.spotify_url.data:
                 self.spotify_url.errors.append('Spotify URL is required')
+                return False
+        elif method == 'manual':
+            if not self.title.data or not self.artist.data:
+                self.title.errors.append('Title and Artist are required for manual entry')
                 return False
         elif method == 'youtube':
             if not self.youtube_url.data:

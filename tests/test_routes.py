@@ -106,6 +106,7 @@ def test_voting_page_requires_auth(client):
     assert '/auth/login' in response.location
 
 def test_voting_page_accessible_when_authenticated(authenticated_client):
-    """Test that voting page is accessible when authenticated"""
+    """Test that voting page redirects to tournaments when no tournament_id provided"""
     response = authenticated_client.get('/voting/bracket')
-    assert response.status_code == 200
+    assert response.status_code == 302
+    assert '/tournaments/' in response.location
